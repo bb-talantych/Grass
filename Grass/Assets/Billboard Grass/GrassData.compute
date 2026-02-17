@@ -1,0 +1,22 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel GetGrassData
+
+struct GrassData {
+    float3 position;
+};
+
+RWStructuredBuffer<GrassData> grassDataBuffer;
+int grassFieldSize;
+
+[numthreads(8,8,1)]
+void GetGrassData (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= grassFieldSize || id.y >= grassFieldSize) return;
+
+    GrassData grassData;
+    uint index = id.y * grassFieldSize + id.x;
+
+    grassData.position = 0.0f;
+    grassData.position.xz = id.xy - (float)grassFieldSize * 0.5f + 0.5;
+    grassDataBuffer[index] = grassData;
+}

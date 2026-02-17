@@ -444,9 +444,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e371eb7a725da64aa3c332ef90b608f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  grassFieldSize: 20
-  grassPrefab: {fileID: 7847360690394034004, guid: bde4351370b15404aab29488a6efc7f6, type: 3}
-  grassPosShader: {fileID: 7200000, guid: a47016811fffa6a46a323bb7985e7732, type: 3}
+  grassFieldSize: 40
+  grassMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+  grassMaterial: {fileID: 2100000, guid: f925a86326d8f27448c55220d698eec7, type: 2}
+  grassComputeShader: {fileID: 7200000, guid: a47016811fffa6a46a323bb7985e7732, type: 3}
 --- !u!4 &1589847497
 Transform:
   m_ObjectHideFlags: 0
