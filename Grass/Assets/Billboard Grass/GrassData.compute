@@ -6,17 +6,19 @@ struct GrassData {
 };
 
 RWStructuredBuffer<GrassData> grassDataBuffer;
-int grassFieldSize;
+int grassFieldResolution, grassDensity;
 
 [numthreads(8,8,1)]
 void GetGrassData (uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= grassFieldSize || id.y >= grassFieldSize) return;
+    if (id.x >= grassFieldResolution || id.y >= grassFieldResolution) return;
 
     GrassData grassData;
-    uint index = id.y * grassFieldSize + id.x;
 
     grassData.position = 0.0f;
-    grassData.position.xz = id.xy - (float)grassFieldSize * 0.5f + 0.5;
+    grassData.position.xz = id.xy - (float)grassFieldResolution * 0.5f + 0.5f;
+    grassData.position.xz *= 1.0f / grassDensity;
+
+    uint index = id.y * grassFieldResolution + id.x;
     grassDataBuffer[index] = grassData;
 }

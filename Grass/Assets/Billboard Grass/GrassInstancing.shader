@@ -30,6 +30,8 @@ Shader "_BB/GrassInstancing"
 
             float4 _Color;
 
+            float _OffsetY;
+
             struct appdata
             {
                 float4 vertex : POSITION;
@@ -49,6 +51,7 @@ Shader "_BB/GrassInstancing"
                 v2f o;
 
                 float3 offset = positionBuffer[id];
+                offset.y += _OffsetY;
                 float4 worldPos = float4(v.vertex.xyz + offset, 1.0);
                 o.vertex = UnityObjectToClipPos(worldPos);
 
