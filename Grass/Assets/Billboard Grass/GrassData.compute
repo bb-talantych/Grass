@@ -1,7 +1,8 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel GetGrassData
 
-struct GrassData {
+struct GrassData 
+{
     float3 position;
 };
 
@@ -15,10 +16,12 @@ void GetGrassData (uint3 id : SV_DispatchThreadID)
 
     GrassData grassData;
 
+    // initial position
     grassData.position = 0.0f;
     grassData.position.xz = id.xy - (float)grassFieldResolution * 0.5f + 0.5f;
     grassData.position.xz *= 1.0f / grassDensity;
 
+    // finalizing buffer
     uint index = id.y * grassFieldResolution + id.x;
     grassDataBuffer[index] = grassData;
 }
