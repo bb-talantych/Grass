@@ -1,0 +1,35 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel GetGrassData
+
+#include "Simplex.compute"
+
+struct GrassData 
+{
+    float3 position;
+};
+
+RWStructuredBuffer<GrassData> grassDataBuffer;
+int grassFieldResolution, grassDensity;
+
+[numthreads(8,8,1)]
+void GetGrassData (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= grassFieldResolution || id.y >= grassFieldResolution) return;
+
+    GrassData grassData;
+
+    // calculate positions
+    float4 grassPos = 0.0f;
+    grassPos.xz = id.xy - (float)grassFieldResolution * 0.5f + 0.5f;
+    grassPos.xz *= 1.0f / grassDensity;
+
+    // offset position with noise
+    grassPos.x += snoise(float3(grassPos.xz, 0.0f) * 3.0f) * 0.732f;
+    grassPos.z += snoise(float3(grassPos.xz, 0.0f) * 4.0f) * 0.648f;
+
+    // finalizing buffer
+    grassData.position = grassPos;
+
+    uint index = id.y * grassFieldResolution + id.x;
+    grassDataBuffer[index] = grassData;
+}
