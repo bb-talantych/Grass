@@ -9,7 +9,13 @@ struct GrassData
 };
 
 RWStructuredBuffer<GrassData> grassDataBuffer;
+
 int grassFieldResolution, grassDensity;
+
+Texture2D<float4> _HeightMap;
+SamplerState sampler_HeightMap;
+
+float _DisplacementStrength;
 
 [numthreads(8,8,1)]
 void GetGrassData (uint3 id : SV_DispatchThreadID)
@@ -26,6 +32,13 @@ void GetGrassData (uint3 id : SV_DispatchThreadID)
     // offset position with noise
     grassPos.x += snoise(float3(grassPos.xz, 0.0f) * 3.0f) * 0.732f;
     grassPos.z += snoise(float3(grassPos.xz, 0.0f) * 4.0f) * 0.648f;
+
+    // calculate uv
+    float2 uv = grassPos.xz / grassFieldResolution;
+
+    // offset height with noise
+    float4 noise = _HeightMap.SampleLevel(sampler_HeightMap, uv, 0);
+    grassPos.y += noise.r * _DisplacementStrength + 0.5f;
 
     // finalizing buffer
     grassData.position = grassPos;

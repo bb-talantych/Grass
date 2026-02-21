@@ -5,15 +5,22 @@ using UnityEngine;
 
 public class GrassController : MonoBehaviour
 {
+    [Header("Generation Properties")]
     [Range(1, 1000)]
     public int grassFieldSize = 300;
     [Range(1, 5)]
     public int grassDensity = 5;
+    [Range(0, 5)]
+    public float displacementStrength = 1;
 
+    [Header("Shader Properties")]
     [Range(0, 360)]
     public float rotation = 45f;
-    [Range(0, 5)]
+    [Range(0, 0.2f)]
     public float protrusion = 0.1f;
+
+    [Range(0, 4f)]
+    public float animationSpeed = 1.0f;
 
     public Mesh grassMesh;
     public Material grassMaterial;
@@ -21,10 +28,11 @@ public class GrassController : MonoBehaviour
 
     public Material grassMaterial2, grassMaterial3;
 
-    private ComputeBuffer grassDataBuffer;
-    private ComputeBuffer argsBuffer;
+    public Texture2D heightTex;
 
-    private int lastFieldSize, lastDensity;
+    private int kernelIndex, threadGroups;
+    private ComputeBuffer grassDataBuffer, argsBuffer;
+
 
     void Start()
     {
@@ -32,23 +40,25 @@ public class GrassController : MonoBehaviour
         grassMaterial2.SetVector("_ProtrusionDir", Vector3.forward);
         grassMaterial3.SetVector("_ProtrusionDir", Vector3.forward);
 
-        RegenerateGrass();
+        GenerateGrass();
     }
 
     void Update()
     {
-        if(lastDensity != grassDensity || lastFieldSize != grassFieldSize)
-        {
-            RegenerateGrass();
-        }
+        grassComputeShader.SetFloat("_DisplacementStrength", displacementStrength);
+        grassComputeShader.SetTexture(kernelIndex, "_HeightMap", heightTex);
+        grassComputeShader.Dispatch(kernelIndex, threadGroups, threadGroups, 1);
 
         grassMaterial.SetFloat("_Protrusion", protrusion);
+        grassMaterial.SetFloat("_AnimationSpeed", animationSpeed);
 
         grassMaterial2.SetFloat("_Rotation", rotation);
         grassMaterial2.SetFloat("_Protrusion", protrusion);
+        grassMaterial2.SetFloat("_AnimationSpeed", animationSpeed);
 
         grassMaterial3.SetFloat("_Rotation", -rotation);
         grassMaterial3.SetFloat("_Protrusion", protrusion);
+        grassMaterial3.SetFloat("_AnimationSpeed", animationSpeed);
 
         Graphics.DrawMeshInstancedIndirect(
             grassMesh,
@@ -74,25 +84,20 @@ public class GrassController : MonoBehaviour
 
     }
 
-    void RegenerateGrass()
+    void GenerateGrass()
     {
-        lastFieldSize = grassFieldSize;
-        lastDensity = grassDensity;
-
-        grassDataBuffer?.Release();
-        argsBuffer?.Release();
-
         int grassFieldResolution = grassFieldSize * grassDensity;
         int totalInstances = grassFieldResolution * grassFieldResolution;
+        kernelIndex = grassComputeShader.FindKernel("GetGrassData");
+        threadGroups = Mathf.CeilToInt(grassFieldResolution / 8f);
 
         grassDataBuffer = new ComputeBuffer(totalInstances, sizeof(float) * 3);
-
-        int kernelIndex = grassComputeShader.FindKernel("GetGrassData");
 
         grassComputeShader.SetBuffer(kernelIndex, "grassDataBuffer", grassDataBuffer);
         grassComputeShader.SetInt("grassFieldResolution", grassFieldResolution);
         grassComputeShader.SetInt("grassDensity", grassDensity);
-        int threadGroups = Mathf.CeilToInt(grassFieldResolution / 8f);
+        grassComputeShader.SetFloat("_DisplacementStrength", displacementStrength);
+        grassComputeShader.SetTexture(kernelIndex, "_HeightMap", heightTex);
         grassComputeShader.Dispatch(kernelIndex, threadGroups, threadGroups, 1);
 
         grassMaterial.enableInstancing = true;

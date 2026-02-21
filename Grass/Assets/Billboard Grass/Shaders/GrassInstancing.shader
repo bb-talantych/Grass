@@ -20,7 +20,7 @@ Shader "_BB/GrassInstancing"
             #pragma fragment frag
             #pragma multi_compile_instancing
 
-            #include "UnityCG.cginc"
+            #include "UnityPBSLighting.cginc"
 
             struct GrassData 
             {
@@ -34,10 +34,10 @@ Shader "_BB/GrassInstancing"
 
             float4 _Color;
 
-            float _Rotation, _Protrusion;
+            float _Rotation, _Protrusion, _AnimationSpeed;
             float3 _ProtrusionDir;
 
-            #define OFFSET_Y 0.5f
+            //#define OFFSET_Y 0.5f
 
             struct appdata
             {
@@ -46,7 +46,6 @@ Shader "_BB/GrassInstancing"
 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
-
             struct v2f
             {
                 float2 uv : TEXCOORD0;
@@ -65,21 +64,23 @@ Shader "_BB/GrassInstancing"
 
                 return rotatedVertex;
             }
-
             v2f vert(appdata v, uint id : SV_InstanceID)
             {
                 v2f o;
 
-                float3 offset = grassDataBuffer[id].position;
-
+                float3 offset = grassDataBuffer[id].position;            
                 #if defined (OFFSET_Y)
                     offset.y += OFFSET_Y;
                 #endif
-                
                 if(_Protrusion != 0)
                 {
-                    float3 test = RotateAroundY(_ProtrusionDir, _Rotation);
-                    offset += test * _Protrusion;
+                    float3 rotatedProtrusionDir = RotateAroundY(_ProtrusionDir, _Rotation);
+                    offset += rotatedProtrusionDir * _Protrusion;
+                }
+
+                if(v.uv.y > 0.9f)
+                {
+                    offset += float3(0.5, 0, 0) * sin(_Time.y * _AnimationSpeed);
                 }
 
                 float3 rotatedVertex = RotateAroundY(v.vertex.xyz, _Rotation);
@@ -98,7 +99,13 @@ Shader "_BB/GrassInstancing"
                 if(mainTex.a < 0.1)
                     discard;
 
-                return mainTex * _Color;
+                float3 lightDir = _WorldSpaceLightPos0.xyz;
+                float ndotl = DotClamped(lightDir, normalize(float3(0, 1, 0)));
+
+                //float4 finalColor = lerp(0, mainTex * _Color, i.uv.y);
+                float4 finalColor = mainTex * ndotl;
+
+                return finalColor;
             }
             ENDCG
         }
