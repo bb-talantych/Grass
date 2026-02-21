@@ -2,5 +2,9 @@
 A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 
 ## Optimization Techniques Used
-* Frustum Culling of Vertices
-* LOD Culling
+* GPU Instancing
+* CPU Frustum Culling
+* Level Of Detail(LOD)
+
+## Billboad Grass
+https://github.com/bb-talantych/Grass/blob/main/examples/grass-billboard-v1.mp4
