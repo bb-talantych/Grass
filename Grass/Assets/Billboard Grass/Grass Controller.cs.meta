@@ -3,7 +3,13 @@ guid: 1e371eb7a725da64aa3c332ef90b608f
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - grassMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+  - grassMaterial: {fileID: 2100000, guid: f925a86326d8f27448c55220d698eec7, type: 2}
+  - grassMaterial2: {fileID: 2100000, guid: 186dd793c0181c443b348772250c7647, type: 2}
+  - grassMaterial3: {fileID: 2100000, guid: 07d5d821c88a7934293a796c062928d6, type: 2}
+  - grassComputeShader: {fileID: 7200000, guid: a47016811fffa6a46a323bb7985e7732, type: 3}
+  - heightTex: {fileID: 2800000, guid: 4fc65e3fe400dfe47841db93f72913fa, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

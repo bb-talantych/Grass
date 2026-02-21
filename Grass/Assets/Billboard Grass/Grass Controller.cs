@@ -10,38 +10,34 @@ public class GrassController : MonoBehaviour
     public int grassFieldSize = 300;
     [Range(1, 25)]
     public int grassDensity = 2;
-    [Range(0, 5)]
-    public float displacementStrength = 1;
+    [Range(0.001f, 5)]
+    public float displacementStrength = 2;
 
     [Header("Shader Properties")]
     [Range(0, 360)]
     public float rotation = 45f;
     [Range(0, 0.2f)]
-    public float protrusion = 0.1f;
+    public float protrusion = 0f;
 
     
-    public Vector3 windDirection = Vector3.right;
+    public Vector3 windDirection = new Vector3(1, 0.5f, 0);
     [Range(0, 5f)]
-    public float lowGrassAnimationSpeed = 1.0f;
+    public float lowGrassAnimationSpeed = 1.2f;
     [Range(0, 5f)]
-    public float highGrassAnimationSpeed = 0.5f;
+    public float highGrassAnimationSpeed = 0.47f;
+    [Range(0.1f, 1f)]
+    public float cullingBias = 0.5f;
+    [Range(10.0f, 500f)]
+    public float lodCutoff = 250f;
 
+    [Header("Required Assets")]
     public Mesh grassMesh;
-    public Material grassMaterial;
+    public Material grassMaterial, grassMaterial2, grassMaterial3;
     public ComputeShader grassComputeShader;
-
-    public Material grassMaterial2, grassMaterial3;
-
     public Texture2D heightTex;
 
     private int kernelIndex, threadGroups;
     private ComputeBuffer grassDataBuffer, argsBuffer;
-
-    struct GrassData
-    {
-        Vector3 position;
-        Vector2 uv;
-    };
 
     void Start()
     {
@@ -58,22 +54,35 @@ public class GrassController : MonoBehaviour
         grassComputeShader.SetTexture(kernelIndex, "_HeightMap", heightTex);
         grassComputeShader.Dispatch(kernelIndex, threadGroups, threadGroups, 1);
 
+        grassMaterial.SetVector("_CamPos", Camera.main.transform.position);
+        grassMaterial2.SetVector("_CamPos", Camera.main.transform.position);
+        grassMaterial3.SetVector("_CamPos", Camera.main.transform.position);
+
         grassMaterial.SetFloat("_Protrusion", protrusion);
         grassMaterial.SetFloat("_LowGrassAnimationSpeed", lowGrassAnimationSpeed);
         grassMaterial.SetFloat("_HighGrassAnimationSpeed", highGrassAnimationSpeed);
         grassMaterial.SetVector("_WindDir", windDirection);
+        grassMaterial.SetFloat("_DisplacementStrength", displacementStrength);
+        grassMaterial.SetFloat("_CullingBias", cullingBias);
+        grassMaterial.SetFloat("_LODCutoff", lodCutoff);
 
         grassMaterial2.SetFloat("_Rotation", rotation);
         grassMaterial2.SetFloat("_Protrusion", protrusion);
         grassMaterial2.SetFloat("_LowGrassAnimationSpeed", lowGrassAnimationSpeed);
         grassMaterial2.SetFloat("_HighGrassAnimationSpeed", highGrassAnimationSpeed);
         grassMaterial2.SetVector("_WindDir", windDirection);
+        grassMaterial2.SetFloat("_DisplacementStrength", displacementStrength);
+        grassMaterial2.SetFloat("_CullingBias", cullingBias);
+        grassMaterial2.SetFloat("_LODCutoff", lodCutoff);
 
         grassMaterial3.SetFloat("_Rotation", -rotation);
         grassMaterial3.SetFloat("_Protrusion", protrusion);
         grassMaterial3.SetFloat("_LowGrassAnimationSpeed", lowGrassAnimationSpeed);
         grassMaterial3.SetFloat("_HighGrassAnimationSpeed", highGrassAnimationSpeed);
         grassMaterial3.SetVector("_WindDir", windDirection);
+        grassMaterial3.SetFloat("_DisplacementStrength", displacementStrength);
+        grassMaterial3.SetFloat("_CullingBias", cullingBias);
+        grassMaterial3.SetFloat("_LODCutoff", lodCutoff);
 
         Graphics.DrawMeshInstancedIndirect(
             grassMesh,
@@ -105,7 +114,7 @@ public class GrassController : MonoBehaviour
         int totalInstances = grassFieldResolution * grassFieldResolution;
         kernelIndex = grassComputeShader.FindKernel("GetGrassData");
         threadGroups = Mathf.CeilToInt(grassFieldResolution / 8f);
-        int totalSize = sizeof(float) * 3 + sizeof(float) * 2 + sizeof(float) + sizeof(float);
+        int totalSize = sizeof(float) * 3 + sizeof(float) * 2 + sizeof(float);
 
         grassDataBuffer = new ComputeBuffer(totalInstances, totalSize);
 

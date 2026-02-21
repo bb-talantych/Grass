@@ -1,4 +1,3 @@
-// Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel GetGrassData
 
 #include "Simplex.compute"
@@ -8,12 +7,11 @@ struct GrassData
     float3 position;
     float2 uv;
     float displacement;
-    float normalizedHeight;
 };
 
 RWStructuredBuffer<GrassData> grassDataBuffer;
 
-int grassFieldResolution, grassDensity;
+uint grassFieldResolution, grassDensity;
 
 Texture2D<float4> _HeightMap;
 SamplerState sampler_HeightMap;
@@ -27,12 +25,10 @@ void GetGrassData (uint3 id : SV_DispatchThreadID)
 
     GrassData grassData;
 
-    float oneOverDensity = 1.0f / float(grassDensity);
-
     // calculate positions
     float3 grassPos = 0.0f;
     grassPos.xz = id.xy - (float)grassFieldResolution * 0.5f + 0.5f;
-    grassPos.xz *= oneOverDensity;
+    grassPos.xz *= (1.0f / float(grassDensity));
 
     // offset position with noise
     grassPos.x += snoise(float3(grassPos.xz, 0.0f) * 3.0f) * 0.732f;
@@ -42,17 +38,16 @@ void GetGrassData (uint3 id : SV_DispatchThreadID)
     float2 uv = id.xy / float(grassFieldResolution);
 
     // offset height with noise
-    float3 noise = _HeightMap.SampleLevel(sampler_HeightMap, uv, 0);
+    float3 noise = _HeightMap.SampleLevel(sampler_HeightMap, uv, 0).rgb;
     float luminance = dot(noise, float3(0.2126, 0.7152, 0.0722));
-    float normalizedHeight = luminance;
-    float displacement = normalizedHeight * _DisplacementStrength;
+    float normalizedDisplacement = luminance;
+    float displacement = normalizedDisplacement * _DisplacementStrength;
     grassPos.y += displacement;
 
     // finalizing buffer
     grassData.position = grassPos;
     grassData.uv = uv;
     grassData.displacement = displacement;
-    grassData.normalizedHeight = normalizedHeight;
 
     uint index = id.y * grassFieldResolution + id.x;
     grassDataBuffer[index] = grassData;
