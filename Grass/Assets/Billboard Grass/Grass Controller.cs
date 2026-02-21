@@ -19,8 +19,12 @@ public class GrassController : MonoBehaviour
     [Range(0, 0.2f)]
     public float protrusion = 0.1f;
 
-    [Range(0, 4f)]
-    public float animationSpeed = 1.0f;
+    
+    public Vector3 windDirection = Vector3.right;
+    [Range(0, 5f)]
+    public float lowGrassAnimationSpeed = 1.0f;
+    [Range(0, 5f)]
+    public float highGrassAnimationSpeed = 0.5f;
 
     public Mesh grassMesh;
     public Material grassMaterial;
@@ -55,19 +59,21 @@ public class GrassController : MonoBehaviour
         grassComputeShader.Dispatch(kernelIndex, threadGroups, threadGroups, 1);
 
         grassMaterial.SetFloat("_Protrusion", protrusion);
-        grassMaterial.SetFloat("_AnimationSpeed", animationSpeed);
+        grassMaterial.SetFloat("_LowGrassAnimationSpeed", lowGrassAnimationSpeed);
+        grassMaterial.SetFloat("_HighGrassAnimationSpeed", highGrassAnimationSpeed);
+        grassMaterial.SetVector("_WindDir", windDirection);
 
         grassMaterial2.SetFloat("_Rotation", rotation);
         grassMaterial2.SetFloat("_Protrusion", protrusion);
-        grassMaterial2.SetFloat("_AnimationSpeed", animationSpeed);
+        grassMaterial2.SetFloat("_LowGrassAnimationSpeed", lowGrassAnimationSpeed);
+        grassMaterial2.SetFloat("_HighGrassAnimationSpeed", highGrassAnimationSpeed);
+        grassMaterial2.SetVector("_WindDir", windDirection);
 
         grassMaterial3.SetFloat("_Rotation", -rotation);
         grassMaterial3.SetFloat("_Protrusion", protrusion);
-        grassMaterial3.SetFloat("_AnimationSpeed", animationSpeed);
-
-        grassMaterial.SetTexture("_TestTex", heightTex);
-        grassMaterial2.SetTexture("_TestTex", heightTex);
-        grassMaterial3.SetTexture("_TestTex", heightTex);
+        grassMaterial3.SetFloat("_LowGrassAnimationSpeed", lowGrassAnimationSpeed);
+        grassMaterial3.SetFloat("_HighGrassAnimationSpeed", highGrassAnimationSpeed);
+        grassMaterial3.SetVector("_WindDir", windDirection);
 
         Graphics.DrawMeshInstancedIndirect(
             grassMesh,
@@ -99,7 +105,7 @@ public class GrassController : MonoBehaviour
         int totalInstances = grassFieldResolution * grassFieldResolution;
         kernelIndex = grassComputeShader.FindKernel("GetGrassData");
         threadGroups = Mathf.CeilToInt(grassFieldResolution / 8f);
-        int totalSize = sizeof(float) * 4 + sizeof(float) * 2;
+        int totalSize = sizeof(float) * 3 + sizeof(float) * 2 + sizeof(float) + sizeof(float);
 
         grassDataBuffer = new ComputeBuffer(totalInstances, totalSize);
 

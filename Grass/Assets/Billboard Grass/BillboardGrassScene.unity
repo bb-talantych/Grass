@@ -446,10 +446,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   grassFieldSize: 300
   grassDensity: 2
-  displacementStrength: 1
+  displacementStrength: 1.5
   rotation: 45
   protrusion: 0
-  animationSpeed: 1
+  windDirection: {x: 1, y: 0.5, z: 0}
+  lowGrassAnimationSpeed: 1.2
+  highGrassAnimationSpeed: 0.4
   grassMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
   grassMaterial: {fileID: 2100000, guid: f925a86326d8f27448c55220d698eec7, type: 2}
   grassComputeShader: {fileID: 7200000, guid: a47016811fffa6a46a323bb7985e7732, type: 3}
