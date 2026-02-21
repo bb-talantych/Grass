@@ -24,12 +24,13 @@ Shader "_BB/GrassInstancing"
 
             struct GrassData 
             {
-                float3 position;
+                float4 position;
+                float2 uv;
             };
 
             StructuredBuffer<GrassData> grassDataBuffer;
 
-            sampler2D _MainTex;
+            sampler2D _MainTex, _TestTex;
             float4 _MainTex_ST;
 
             float4 _Color;
@@ -37,7 +38,7 @@ Shader "_BB/GrassInstancing"
             float _Rotation, _Protrusion, _AnimationSpeed;
             float3 _ProtrusionDir;
 
-            //#define OFFSET_Y 0.5f
+            #define OFFSET_Y 0.5f
 
             struct appdata
             {
@@ -50,6 +51,8 @@ Shader "_BB/GrassInstancing"
             {
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
+
+                float2 worldUV : TEXCOORD1;
             };
 
             float3 RotateAroundY(float3 _vertex, float _deg)
@@ -68,7 +71,9 @@ Shader "_BB/GrassInstancing"
             {
                 v2f o;
 
-                float3 offset = grassDataBuffer[id].position;            
+                float3 offset = grassDataBuffer[id].position.xyz;
+                float yAdjust = grassDataBuffer[id].position.w;
+
                 #if defined (OFFSET_Y)
                     offset.y += OFFSET_Y;
                 #endif
@@ -78,16 +83,15 @@ Shader "_BB/GrassInstancing"
                     offset += rotatedProtrusionDir * _Protrusion;
                 }
 
-                if(v.uv.y > 0.9f)
-                {
-                    offset += float3(0.5, 0, 0) * sin(_Time.y * _AnimationSpeed);
-                }
+                offset.y -= (yAdjust * (1 - v.uv.y));
+                offset += float3(0.5, 0, 0) * sin(_Time.y * _AnimationSpeed) * v.uv.y;
 
                 float3 rotatedVertex = RotateAroundY(v.vertex.xyz, _Rotation);
                 float4 worldPos = float4(rotatedVertex + offset, 1.0f);
                 o.vertex = UnityObjectToClipPos(worldPos);
 
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.worldUV = grassDataBuffer[id].uv;
 
                 return o;
             }
@@ -102,8 +106,9 @@ Shader "_BB/GrassInstancing"
                 float3 lightDir = _WorldSpaceLightPos0.xyz;
                 float ndotl = DotClamped(lightDir, normalize(float3(0, 1, 0)));
 
-                //float4 finalColor = lerp(0, mainTex * _Color, i.uv.y);
-                float4 finalColor = mainTex * ndotl;
+                float4 finalColor = lerp(0, mainTex * _Color, i.uv.y);
+                finalColor = lerp(finalColor, float4(1, 0.8, 0, 1), i.uv.y);
+                finalColor = finalColor * ndotl;
 
                 return finalColor;
             }

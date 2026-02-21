@@ -8,8 +8,8 @@ public class GrassController : MonoBehaviour
     [Header("Generation Properties")]
     [Range(1, 1000)]
     public int grassFieldSize = 300;
-    [Range(1, 5)]
-    public int grassDensity = 5;
+    [Range(1, 25)]
+    public int grassDensity = 2;
     [Range(0, 5)]
     public float displacementStrength = 1;
 
@@ -33,6 +33,11 @@ public class GrassController : MonoBehaviour
     private int kernelIndex, threadGroups;
     private ComputeBuffer grassDataBuffer, argsBuffer;
 
+    struct GrassData
+    {
+        Vector3 position;
+        Vector2 uv;
+    };
 
     void Start()
     {
@@ -59,6 +64,10 @@ public class GrassController : MonoBehaviour
         grassMaterial3.SetFloat("_Rotation", -rotation);
         grassMaterial3.SetFloat("_Protrusion", protrusion);
         grassMaterial3.SetFloat("_AnimationSpeed", animationSpeed);
+
+        grassMaterial.SetTexture("_TestTex", heightTex);
+        grassMaterial2.SetTexture("_TestTex", heightTex);
+        grassMaterial3.SetTexture("_TestTex", heightTex);
 
         Graphics.DrawMeshInstancedIndirect(
             grassMesh,
@@ -90,8 +99,9 @@ public class GrassController : MonoBehaviour
         int totalInstances = grassFieldResolution * grassFieldResolution;
         kernelIndex = grassComputeShader.FindKernel("GetGrassData");
         threadGroups = Mathf.CeilToInt(grassFieldResolution / 8f);
+        int totalSize = sizeof(float) * 4 + sizeof(float) * 2;
 
-        grassDataBuffer = new ComputeBuffer(totalInstances, sizeof(float) * 3);
+        grassDataBuffer = new ComputeBuffer(totalInstances, totalSize);
 
         grassComputeShader.SetBuffer(kernelIndex, "grassDataBuffer", grassDataBuffer);
         grassComputeShader.SetInt("grassFieldResolution", grassFieldResolution);

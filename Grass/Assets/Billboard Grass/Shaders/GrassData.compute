@@ -5,7 +5,8 @@
 
 struct GrassData 
 {
-    float3 position;
+    float4 position;
+    float2 uv;
 };
 
 RWStructuredBuffer<GrassData> grassDataBuffer;
@@ -24,24 +25,29 @@ void GetGrassData (uint3 id : SV_DispatchThreadID)
 
     GrassData grassData;
 
+    float oneOverDensity = 1.0f / float(grassDensity);
+
     // calculate positions
-    float4 grassPos = 0.0f;
+    float3 grassPos = 0.0f;
     grassPos.xz = id.xy - (float)grassFieldResolution * 0.5f + 0.5f;
-    grassPos.xz *= 1.0f / grassDensity;
+    grassPos.xz *= oneOverDensity;
 
     // offset position with noise
     grassPos.x += snoise(float3(grassPos.xz, 0.0f) * 3.0f) * 0.732f;
     grassPos.z += snoise(float3(grassPos.xz, 0.0f) * 4.0f) * 0.648f;
 
     // calculate uv
-    float2 uv = grassPos.xz / grassFieldResolution;
+    float2 uv = id.xy / float(grassFieldResolution);
 
     // offset height with noise
     float4 noise = _HeightMap.SampleLevel(sampler_HeightMap, uv, 0);
-    grassPos.y += noise.r * _DisplacementStrength + 0.5f;
+    float luminance = dot(noise.rgb, float3(0.2126, 0.7152, 0.0722));
+    float yAdjust = luminance * luminance * _DisplacementStrength;
+    grassPos.y += yAdjust;
 
     // finalizing buffer
-    grassData.position = grassPos;
+    grassData.position = float4(grassPos, yAdjust);
+    grassData.uv = uv;
 
     uint index = id.y * grassFieldResolution + id.x;
     grassDataBuffer[index] = grassData;
