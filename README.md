@@ -7,4 +7,4 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 * Level Of Detail(LOD)
 
 ## Billboad Grass
-https://github.com/bb-talantych/Grass/blob/main/examples/grass-billboard-v1.mp4
+![](./examples/grass_billboard.gif)
