@@ -8,3 +8,8 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 
 ## Billboad Grass
 ![](./examples/grass-billboard-v1.gif)
+
+## Resources Used
+ - [Acerola](https://www.youtube.com/watch?v=Y0Ko0kvwfgA)
+ - [GPU Gems](https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-7-rendering-countless-blades-waving-grass)
+ - [Game Dev Guide](https://www.youtube.com/watch?v=BrZ4pWwkpto)
