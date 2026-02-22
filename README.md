@@ -7,4 +7,4 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 * Level Of Detail(LOD)
 
 ## Billboad Grass
-![](./examples/grass_billboard.gif)
+![](./examples/grass-billboard-v1.gif)
