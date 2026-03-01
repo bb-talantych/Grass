@@ -103,6 +103,7 @@ Shader "_BB/Billboad Grass Shader"
             bool QuandIsLODCulled(float _dist, int _quadID)
             {
                 float LODGroup0Dist = _LODCutoff * _LODGroup0Percent;
+                // fixes little zone between LOD1 and LOD2 with no grass
                 float LOD1DistAdjust = 1;
 
                 return  (_quadID == 1 && QuadInLODGroup2Dist(_dist)) ||
