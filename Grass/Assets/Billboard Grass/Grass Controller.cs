@@ -17,18 +17,23 @@ public class GrassController : MonoBehaviour
     [Range(0, 360)]
     public float rotation = 45f;
     [Range(0, 0.2f)]
-    public float protrusion = 0f;
-
-    
+    public float protrusion = 0f;   
     public Vector3 windDirection = new Vector3(1, 0.5f, 0);
     [Range(0, 5f)]
     public float lowGrassAnimationSpeed = 1.2f;
     [Range(0, 5f)]
     public float highGrassAnimationSpeed = 0.47f;
+
+    [Header("Optimization Properties")]
     [Range(0.1f, 1f)]
     public float cullingBias = 0.5f;
-    [Range(10.0f, 500f)]
-    public float lodCutoff = 250f;
+
+    [Range(0f, 500f)]
+    public float lodCutoff = 100f;
+    [Range(0f, 1f)]
+    public float lodGroup1 = 0.15f;
+    [Range(0f, 1f)]
+    public float lodGroup0 = 0.1f;
 
     [Header("Required Assets")]
     public Mesh grassMesh;
@@ -44,6 +49,10 @@ public class GrassController : MonoBehaviour
         grassMaterial.SetVector("_ProtrusionDir", Vector3.back);
         grassMaterial2.SetVector("_ProtrusionDir", Vector3.forward);
         grassMaterial3.SetVector("_ProtrusionDir", Vector3.forward);
+
+        grassMaterial.SetInt("_QuadID", 0);
+        grassMaterial2.SetInt("_QuadID", 1);
+        grassMaterial3.SetInt("_QuadID", 1);
 
         GenerateGrass();
     }
@@ -64,6 +73,8 @@ public class GrassController : MonoBehaviour
         grassMaterial.SetVector("_WindDir", windDirection);
         grassMaterial.SetFloat("_DisplacementStrength", displacementStrength);
         grassMaterial.SetFloat("_CullingBias", cullingBias);
+        grassMaterial.SetFloat("_LODGroup0Percent", lodGroup0);
+        grassMaterial.SetFloat("_LODGroup1Percent", lodGroup1);
         grassMaterial.SetFloat("_LODCutoff", lodCutoff);
 
         grassMaterial2.SetFloat("_Rotation", rotation);
@@ -73,6 +84,8 @@ public class GrassController : MonoBehaviour
         grassMaterial2.SetVector("_WindDir", windDirection);
         grassMaterial2.SetFloat("_DisplacementStrength", displacementStrength);
         grassMaterial2.SetFloat("_CullingBias", cullingBias);
+        grassMaterial2.SetFloat("_LODGroup0Percent", lodGroup0);
+        grassMaterial2.SetFloat("_LODGroup1Percent", lodGroup1);
         grassMaterial2.SetFloat("_LODCutoff", lodCutoff);
 
         grassMaterial3.SetFloat("_Rotation", -rotation);
@@ -82,6 +95,8 @@ public class GrassController : MonoBehaviour
         grassMaterial3.SetVector("_WindDir", windDirection);
         grassMaterial3.SetFloat("_DisplacementStrength", displacementStrength);
         grassMaterial3.SetFloat("_CullingBias", cullingBias);
+        grassMaterial3.SetFloat("_LODGroup0Percent", lodGroup0);
+        grassMaterial3.SetFloat("_LODGroup1Percent", lodGroup1);
         grassMaterial3.SetFloat("_LODCutoff", lodCutoff);
 
         Graphics.DrawMeshInstancedIndirect(

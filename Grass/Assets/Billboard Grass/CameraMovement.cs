@@ -6,8 +6,12 @@ public class CameraMovement : MonoBehaviour
 {
     [SerializeField]
     private float moveSpeed, sensitivity;
+    [SerializeField]
+    private float collisionDetectionDist = 5f;
 
     private Vector2 inputVec, rotationVec;
+    private bool canMove = true;
+    Vector3 moveDir;
 
     private void Start()
     {
@@ -30,7 +34,26 @@ public class CameraMovement : MonoBehaviour
     private void FixedUpdate()
     {
         transform.localEulerAngles = new Vector3(rotationVec.y, rotationVec.x, 0) * Time.fixedDeltaTime;
-        transform.position += (inputVec.y * transform.forward * Time.fixedDeltaTime * moveSpeed);
-        transform.position += (inputVec.x * transform.right * Time.fixedDeltaTime * moveSpeed);
+
+        Vector3 forwardDir = inputVec.y * transform.forward;
+        Vector3 rightDir = inputVec.x * transform.right;
+        moveDir = (forwardDir + rightDir).normalized;
+
+        canMove = true;
+        if (Physics.Raycast(transform.position, moveDir,  out RaycastHit hit , collisionDetectionDist))
+        {
+            canMove = false;
+        }
+
+        if(canMove)
+        {
+            transform.position += (moveDir * Time.fixedDeltaTime * moveSpeed);
+        }
+    }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawRay(transform.position, moveDir);
     }
 }

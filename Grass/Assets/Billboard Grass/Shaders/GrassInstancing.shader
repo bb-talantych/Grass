@@ -1,8 +1,9 @@
-Shader "_BB/GrassInstancing"
+Shader "_BB/Billboad Grass Shader"
 {
     Properties
     {
         _MainTex("Main Texture", 2D) = "white" {}
+        _Color ("Color", Color) = (1, 1, 1, 0)
     }
     SubShader
     {
@@ -34,15 +35,26 @@ Shader "_BB/GrassInstancing"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+            float4 _Color;
 
             float _Rotation, _Protrusion;
             float  _LowGrassAnimationSpeed, _HighGrassAnimationSpeed;
             float3 _ProtrusionDir, _WindDir;
-            float  _DisplacementStrength, _CullingBias, _LODCutoff;
+            float  _DisplacementStrength;
+            int _QuadID;
+            float _CullingBias, _LODGroup0Percent, _LODGroup1Percent, _LODCutoff;
 
             float3 _CamPos;
 
             #define OFFSET_Y 0.5f
+            #if !defined (OFFSET_Y)
+               #define OFFSET_Y 0.0f;
+            #endif
+
+            #define CAMERA_POSITION _CamPos
+            #if !defined(CAMERA_POSITION)
+                #define CAMERA_POSITION _WorldSpaceCameraPos
+            #endif
 
             struct appdata
             {
@@ -71,15 +83,36 @@ Shader "_BB/GrassInstancing"
 
                 return rotatedVertex;
             }
+
+            float GetDistToCamera(float3 _CameraPosition, float3 _vertex)
+            {
+                return distance(_CameraPosition, _vertex);
+            }
             
+            bool QuadInLODGroup2Dist(float _dist)
+            {
+                float LODGroup1Dist = _LODCutoff * _LODGroup1Percent;
+                return _dist > LODGroup1Dist;
+            }
+
             bool VertexIsBelowClipPlane (float3 _vertex, int _planeIndex, float _bias) 
             {
                 float4 plane = unity_CameraWorldClipPlanes[_planeIndex];
                 return dot(float4(_vertex, 1), plane) < _bias;
             }
-            bool VertexIsCulled(float3 _vertex, float _bias)
+            bool QuandIsLODCulled(float _dist, int _quadID)
             {
-                return  distance(_CamPos, _vertex) > _LODCutoff ||
+                float LODGroup0Dist = _LODCutoff * _LODGroup0Percent;
+                float LOD1DistAdjust = 1;
+
+                return  (_quadID == 1 && QuadInLODGroup2Dist(_dist)) ||
+                        (_quadID == 0 && _dist > LODGroup0Dist && !QuadInLODGroup2Dist(_dist + LOD1DistAdjust));
+                        
+            }
+            bool VertexIsCulled(float _dist, float3 _vertex, float _bias)
+            {
+                return  _dist > _LODCutoff ||
+                        QuandIsLODCulled(_dist, _QuadID) ||
                         VertexIsBelowClipPlane(_vertex, 0, _bias) ||
 		                VertexIsBelowClipPlane(_vertex, 1, _bias) ||
 		                VertexIsBelowClipPlane(_vertex, 2, _bias) ||
@@ -90,37 +123,51 @@ Shader "_BB/GrassInstancing"
             {
                 v2f o;
 
+                // get values from command buffer
                 float3 offset = grassDataBuffer[id].position;
                 float displacement = grassDataBuffer[id].displacement;
                 
-                float normalizedDisplacement;
+                float normalizedDisplacement = 0;
                 if(_DisplacementStrength != 0)
+                {
                     normalizedDisplacement = displacement * (1 / _DisplacementStrength);
-                else
-                    normalizedDisplacement = 0;
+                }
 
-                #if defined (OFFSET_Y)
-                    offset.y += OFFSET_Y;
-                #endif
+                // adjust vertex position
+                offset.y += OFFSET_Y;
+                offset.y -= (displacement * (1 - v.uv.y));
                 if(_Protrusion != 0)
                 {
                     float3 rotatedProtrusionDir = RotateAroundY(_ProtrusionDir, _Rotation);
                     offset += rotatedProtrusionDir * _Protrusion;
                 }
 
-                offset.y -= (displacement * (1 - v.uv.y));
-
+                // animation
                 float animationSpeed = lerp(_LowGrassAnimationSpeed, _HighGrassAnimationSpeed, normalizedDisplacement);
                 float normalizedAnimationTime = sin(_Time.y * animationSpeed) * 0.5 + 0.5;
                 float animationTime = lerp(-0.47, 1, normalizedAnimationTime) * (0.5, 1, normalizedDisplacement);
                 offset += normalize(_WindDir) * animationTime * v.uv.y;
 
+                // calcuate vertex world position and distance to Camera
                 float3 rotatedVertex = RotateAroundY(v.vertex.xyz, _Rotation);
                 float4 worldPos = float4(rotatedVertex + offset, 1.0f);
-                if(VertexIsCulled(worldPos, -_CullingBias * max(1.0f, _DisplacementStrength)))
-                    o.vertex = float4(0, 0, -1e8, 1);
-                else
+                float distToCam = GetDistToCamera(CAMERA_POSITION, worldPos);
+                if(_QuadID == 0 && QuadInLODGroup2Dist(distToCam))
+                {
+                    float3 lookDir = normalize(_CamPos - worldPos);
+                    float rotationAngle = degrees(atan2(lookDir.z, lookDir.x)) + 90.0f;
+
+                    rotatedVertex = RotateAroundY(rotatedVertex, rotationAngle);
+                    worldPos = float4(rotatedVertex + offset, 1.0f);
+                    distToCam = GetDistToCamera(CAMERA_POSITION, worldPos);
+                }
+
+                // sending values to fragment + culling
+                o.vertex = float4(0, 0, -1e8, 1);
+                if(!VertexIsCulled(distToCam, worldPos, -_CullingBias * max(1.0f, _DisplacementStrength)))
+                {
                     o.vertex = UnityObjectToClipPos(worldPos);
+                }
 
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.normalizedDisplacement = normalizedDisplacement;
@@ -143,6 +190,7 @@ Shader "_BB/GrassInstancing"
                 finalColor = lerp(finalColor, topColor, i.uv.y);
                 finalColor = finalColor * ndotl;
 
+                finalColor.rgb = lerp(finalColor, _Color, _Color.a);
                 return finalColor;
             }
             ENDCG
