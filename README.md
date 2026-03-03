@@ -7,7 +7,7 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 * Level Of Detail(LOD)
 * Distance Culling
 
-## Billboad Grass
+## Grass Cards + Billboad Grass
 ![](./examples/grass-billboard-v1.gif)
 
 ## Resources Used
