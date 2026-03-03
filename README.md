@@ -5,6 +5,7 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 * GPU Instancing
 * CPU Frustum Culling
 * Level Of Detail(LOD)
+* Distance Culling
 
 ## Billboad Grass
 ![](./examples/grass-billboard-v1.gif)
