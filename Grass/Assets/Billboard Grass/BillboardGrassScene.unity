@@ -567,7 +567,7 @@ MonoBehaviour:
   displacementStrength: 2
   rotation: 45
   protrusion: 0
-  windDirection: {x: 1, y: 0, z: 0.5}
+  windDirection: {x: 1, y: 0.5, z: 0}
   lowGrassAnimationSpeed: 1.2
   highGrassAnimationSpeed: 0.47
   cullingBias: 0.5
