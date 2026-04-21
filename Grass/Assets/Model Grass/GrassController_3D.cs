@@ -11,13 +11,13 @@ public class GrassController_3D : MonoBehaviour
     [Range(1, 1000)]
     public int grassFieldSize = 300;
     [Range(1, 25)]
-    public int grassDensity = 2;
+    public int grassDensity = 5;
     [Range(0.001f, 5)]
-    public float displacementStrength = 2;
+    public float displacementStrength = 1;
 
     [Header("Shader Properties")]
-    public Color baseColor;
-    public Color tipColor;
+    public Color baseColor = new Color(0.09569933f, 0.2641509f, 0.06852973f, 0);
+    public Color tipColor = new Color(0.8584906f, 0.8019983f, 0.1012371f, 0);
     public Vector3 windDirection = new Vector3(1, 0.5f, 0);
     [Range(0, 5f)]
     public float lowGrassAnimationSpeed = 1.2f;
@@ -26,7 +26,9 @@ public class GrassController_3D : MonoBehaviour
 
     [Header("Optimization Properties")]
     [Range(0f, 1f)]
-    public float cullingBias = 0.5f;
+    public float cullingBias = 0.25f;
+    [Range(0f, 2f)]
+    public float cullingBias_Down = 1.75f;
     [Range(0f, 500f)]
     public float lodCutoff = 100f;
 
@@ -57,6 +59,7 @@ public class GrassController_3D : MonoBehaviour
         cullGrassCompute.SetVector("_CamPos", Camera.main.transform.position);
         cullGrassCompute.SetFloat("_LODCutoff", lodCutoff);
         cullGrassCompute.SetFloat("_CullingBias", cullingBias);
+        cullGrassCompute.SetFloat("_CullingBias_Down", cullingBias_Down);
         cullGrassCompute.SetVectorArray("_CameraClipPlanes", GetViewFrustumPlaneNormals(Camera.main));
 
         culledGrassBuffer.SetCounterValue(0);

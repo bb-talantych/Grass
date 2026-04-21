@@ -13,7 +13,7 @@ AppendStructuredBuffer<GrassData3D> culledGrassBuffer;
 float _TotalInstances;
 
 float3 _CamPos;
-float _LODCutoff, _CullingBias;
+float _LODCutoff, _CullingBias, _CullingBias_Down;
 float4 _CameraClipPlanes[4];
 
 bool VertexIsBelowClipPlane (float3 _vertex, int _planeIndex, float _bias) 
@@ -28,7 +28,7 @@ bool VertexIsCulled(float3 _camPos, float3 _grassPos, float _bias)
     return dist >= _LODCutoff ||
             VertexIsBelowClipPlane(_grassPos, 0, _bias) ||
 		    VertexIsBelowClipPlane(_grassPos, 1, _bias) ||
-		    VertexIsBelowClipPlane(_grassPos, 2, _bias) ||
+		    VertexIsBelowClipPlane(_grassPos, 2, -_CullingBias_Down) ||
 		    VertexIsBelowClipPlane(_grassPos, 3, _bias);
 }
 

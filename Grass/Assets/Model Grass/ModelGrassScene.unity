@@ -580,12 +580,13 @@ MonoBehaviour:
   grassFieldSize: 300
   grassDensity: 5
   displacementStrength: 1
-  baseColor: {r: 0.095699325, g: 0.26415092, b: 0.068529725, a: 0}
-  tipColor: {r: 0.8584906, g: 0.8019983, b: 0.10123708, a: 0}
+  baseColor: {r: 0.09569933, g: 0.2641509, b: 0.06852973, a: 0}
+  tipColor: {r: 0.8584906, g: 0.8019983, b: 0.1012371, a: 0}
   windDirection: {x: 1, y: 0.5, z: 0}
   lowGrassAnimationSpeed: 1.2
   highGrassAnimationSpeed: 0.47
-  cullingBias: 0.5
+  cullingBias: 0.25
+  cullingBias_Down: 1.75
   lodCutoff: 100
   grassMesh: {fileID: -462981019419857548, guid: 122edea8244e1f44d86056a05057855f, type: 3}
   grassMaterial: {fileID: 2100000, guid: 93f68c98d94fb9049b0e6c6a67fa2fd1, type: 2}
