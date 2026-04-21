@@ -23,29 +23,21 @@ Shader "_BB/3D Grass Shader"
 
             #include "UnityPBSLighting.cginc"
 
-            struct GrassData 
+            struct GrassData3D 
             {
                 float3 position;
                 float2 uv;
                 float displacement;
             };
 
-            StructuredBuffer<GrassData> grassDataBuffer;
+            StructuredBuffer<GrassData3D> grassDataBuffer;
 
             float3 _BaseColor, _TipColor;
             float4 _Color;
 
             float  _LowGrassAnimationSpeed, _HighGrassAnimationSpeed;
-            float3 _ProtrusionDir, _WindDir;
+            float3  _WindDir;
             float  _DisplacementStrength;
-            float _CullingBias, _LODCutoff;
-
-            float3 _CamPos;
-
-            #define CAMERA_POSITION _CamPos
-            #if !defined(CAMERA_POSITION)
-                #define CAMERA_POSITION _WorldSpaceCameraPos
-            #endif
 
             struct appdata
             {
@@ -82,38 +74,15 @@ Shader "_BB/3D Grass Shader"
                 return rotatedVertex;
             }
 
-            float GetDistToCamera(float3 _CameraPosition, float3 _vertex)
-            {
-                return distance(_CameraPosition, _vertex);
-            }
-
-            bool VertexIsBelowClipPlane (float3 _vertex, int _planeIndex, float _bias) 
-            {
-                float4 plane = unity_CameraWorldClipPlanes[_planeIndex];
-                return dot(float4(_vertex, 1), plane) < _bias;
-            }
-            bool VertexIsCulled(float _dist, float3 _vertex, float _bias)
-            {
-                return  _dist > _LODCutoff ||
-                        VertexIsBelowClipPlane(_vertex, 0, _bias) ||
-		                VertexIsBelowClipPlane(_vertex, 1, _bias) ||
-		                VertexIsBelowClipPlane(_vertex, 2, _bias) ||
-		                VertexIsBelowClipPlane(_vertex, 3, _bias);
-            }
-
             v2f vert(appdata v, uint id : SV_InstanceID)
             {
                 v2f o;
 
                 // get values from command buffer
                 float3 offset = grassDataBuffer[id].position;
-                float displacement = grassDataBuffer[id].displacement;
-                
-                float normalizedDisplacement = 0;
-                if(_DisplacementStrength != 0)
-                {
-                    normalizedDisplacement = displacement * (1 / _DisplacementStrength);
-                }
+                float2 grassUV = grassDataBuffer[id].uv;
+                float normalizedDisplacement = grassDataBuffer[id].displacement;
+                float displacement = normalizedDisplacement * _DisplacementStrength;                
 
                 // adjust vertex position
                 offset.y += (displacement * v.uv.y);
@@ -126,18 +95,12 @@ Shader "_BB/3D Grass Shader"
 
                 // calcuate vertex world position and distance to Camera
                 int seed = 3235523;
-                float rotAngle = hash(seed + id) * 360;
+                float rotAngle = hash(seed + (grassUV.x * 1000 + grassUV.y * 10000)) * 360;
                 float3 rotatedVertex = RotateAroundY(v.vertex.xyz, rotAngle);
                 float4 worldPos = float4(rotatedVertex + offset, 1.0f);
-                float distToCam = GetDistToCamera(CAMERA_POSITION, worldPos);
 
-                // sending values to fragment + culling
-                o.vertex = float4(0, 0, -1e8, 1);
-                if(!VertexIsCulled(distToCam, worldPos, -_CullingBias * max(1.0f, _DisplacementStrength)))
-                {
-                    o.vertex = UnityObjectToClipPos(worldPos);
-                }
-
+                // sending values to fragment
+                o.vertex = UnityObjectToClipPos(worldPos);
                 o.uv = v.uv;
                 o.normalizedDisplacement = normalizedDisplacement;
 

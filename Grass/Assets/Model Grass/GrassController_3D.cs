@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using static System.Runtime.InteropServices.Marshal;
+
 public class GrassController_3D : MonoBehaviour
 {
     [Header("Generation Properties")]
@@ -23,33 +25,52 @@ public class GrassController_3D : MonoBehaviour
     public float highGrassAnimationSpeed = 0.47f;
 
     [Header("Optimization Properties")]
-    [Range(0.1f, 1f)]
+    [Range(0f, 1f)]
     public float cullingBias = 0.5f;
-
     [Range(0f, 500f)]
     public float lodCutoff = 100f;
 
     [Header("Required Assets")]
     public Mesh grassMesh;
     public Material grassMaterial;
-    public ComputeShader grassComputeShader;
+    public ComputeShader grassDataCompute, cullGrassCompute;
     public Texture2D heightTex;
 
-    private int kernelIndex, threadGroups;
-    private ComputeBuffer grassDataBuffer, argsBuffer;
+    private ComputeBuffer grassDataBuffer, culledGrassBuffer, argsBuffer, argsCopyCountBuffer;
+    private int culledGrassKernelIndex;
+    private int culledGrassThreadGroups;
+
+    private struct GrassData3D
+    {
+        public Vector3 position;
+        public Vector2 uv;
+        public float displacement;
+    }
 
     void Start()
     {
-        grassMaterial.SetVector("_ProtrusionDir", Vector3.back);
-
         GenerateGrass();
     }
 
     void Update()
     {
-        grassComputeShader.SetFloat("_DisplacementStrength", displacementStrength);
-        grassComputeShader.SetTexture(kernelIndex, "_HeightMap", heightTex);
-        grassComputeShader.Dispatch(kernelIndex, threadGroups, threadGroups, 1);
+        cullGrassCompute.SetVector("_CamPos", Camera.main.transform.position);
+        cullGrassCompute.SetFloat("_LODCutoff", lodCutoff);
+        cullGrassCompute.SetFloat("_CullingBias", cullingBias);
+        cullGrassCompute.SetVectorArray("_CameraClipPlanes", GetViewFrustumPlaneNormals(Camera.main));
+
+        culledGrassBuffer.SetCounterValue(0);
+        cullGrassCompute.Dispatch(culledGrassKernelIndex, culledGrassThreadGroups, 1, 1);
+
+        uint[] argsData = new uint[5]
+         {
+            grassMesh.GetIndexCount(0),
+            (uint)GetCulledGrassCount(),
+            0,
+            0,
+            0
+        };
+        argsBuffer.SetData(argsData);
 
         grassMaterial.SetVector("_CamPos", Camera.main.transform.position);
 
@@ -59,8 +80,6 @@ public class GrassController_3D : MonoBehaviour
         grassMaterial.SetFloat("_HighGrassAnimationSpeed", highGrassAnimationSpeed);
         grassMaterial.SetVector("_WindDir", windDirection);
         grassMaterial.SetFloat("_DisplacementStrength", displacementStrength);
-        grassMaterial.SetFloat("_CullingBias", cullingBias);
-        grassMaterial.SetFloat("_LODCutoff", lodCutoff);
 
         Graphics.DrawMeshInstancedIndirect(
             grassMesh,
@@ -75,40 +94,63 @@ public class GrassController_3D : MonoBehaviour
     {
         int grassFieldResolution = grassFieldSize * grassDensity;
         int totalInstances = grassFieldResolution * grassFieldResolution;
-        kernelIndex = grassComputeShader.FindKernel("GetGrassData");
-        threadGroups = Mathf.CeilToInt(grassFieldResolution / 8f);
-        int totalSize = sizeof(float) * 3 + sizeof(float) * 2 + sizeof(float);
+        int grassDataKernelIndex = grassDataCompute.FindKernel("GetGrassData3D");
+        int grassDataThreadGroups = Mathf.CeilToInt(grassFieldResolution / 8f);
 
-        grassDataBuffer = new ComputeBuffer(totalInstances, totalSize);
+        grassDataBuffer = new ComputeBuffer(totalInstances, SizeOf(typeof(GrassData3D)));
 
-        grassComputeShader.SetBuffer(kernelIndex, "grassDataBuffer", grassDataBuffer);
-        grassComputeShader.SetInt("grassFieldResolution", grassFieldResolution);
-        grassComputeShader.SetInt("grassDensity", grassDensity);
-        grassComputeShader.SetFloat("_DisplacementStrength", displacementStrength);
-        grassComputeShader.SetTexture(kernelIndex, "_HeightMap", heightTex);
-        grassComputeShader.Dispatch(kernelIndex, threadGroups, threadGroups, 1);
+        grassDataCompute.SetBuffer(grassDataKernelIndex, "grassData3DBuffer", grassDataBuffer);
+        grassDataCompute.SetInt("grassFieldResolution", grassFieldResolution);
+        grassDataCompute.SetInt("grassDensity", grassDensity);
+        grassDataCompute.SetTexture(grassDataKernelIndex, "_HeightMap", heightTex);
+        grassDataCompute.Dispatch(grassDataKernelIndex, grassDataThreadGroups, grassDataThreadGroups, 1);
+
+        culledGrassKernelIndex = cullGrassCompute.FindKernel("AppendCulledGrass");
+        culledGrassThreadGroups = Mathf.CeilToInt(totalInstances / 64f);
+
+        culledGrassBuffer = new ComputeBuffer(totalInstances, SizeOf(typeof(GrassData3D)), ComputeBufferType.Append);
+
+        cullGrassCompute.SetFloat("_TotalInstances", totalInstances);
+        cullGrassCompute.SetBuffer(culledGrassKernelIndex, "grassDataBuffer", grassDataBuffer);
+        cullGrassCompute.SetBuffer(culledGrassKernelIndex, "culledGrassBuffer", culledGrassBuffer);
 
         grassMaterial.enableInstancing = true;
-        grassMaterial.SetBuffer("grassDataBuffer", grassDataBuffer);
+        grassMaterial.SetBuffer("grassDataBuffer", culledGrassBuffer);
 
-        uint[] args = new uint[5]
+        // argsBuffer
+        argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
+        argsCopyCountBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
+    }
+
+    int GetCulledGrassCount()
+    {
+        ComputeBuffer.CopyCount(culledGrassBuffer, argsCopyCountBuffer, 0);
+        int[] appendBufferCount = new int[1];
+        argsCopyCountBuffer.GetData(appendBufferCount);
+        return appendBufferCount[0];
+    }
+    private Vector4[] GetViewFrustumPlaneNormals(Camera _cam)
+    {
+        Vector4[] planeNormals = new Vector4[4];
+        Plane[] planes = GeometryUtility.CalculateFrustumPlanes(_cam);
+
+        for (int i = 0; i < 4; i++)
         {
-            grassMesh.GetIndexCount(0),
-            (uint)totalInstances,
-            0,
-            0,
-            0
-        };
-        argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
-        argsBuffer.SetData(args);
+            planeNormals[i] = new Vector4(planes[i].normal.x, planes[i].normal.y, planes[i].normal.z, planes[i].distance);
+        }
+        return planeNormals;
     }
 
     void OnDestroy()
     {
         grassDataBuffer?.Release();
+        culledGrassBuffer?.Release();
         argsBuffer?.Release();
+        argsCopyCountBuffer?.Release();
 
         grassDataBuffer = null;
+        culledGrassBuffer = null;
         argsBuffer = null;
+        argsCopyCountBuffer = null;
     }
 }

@@ -1,0 +1,46 @@
+#pragma kernel AppendCulledGrass
+
+struct GrassData3D 
+{
+    float3 position;
+    float2 uv;
+    float displacement;
+};
+
+RWStructuredBuffer<GrassData3D> grassDataBuffer;
+AppendStructuredBuffer<GrassData3D> culledGrassBuffer;
+
+float _TotalInstances;
+
+float3 _CamPos;
+float _LODCutoff, _CullingBias;
+float4 _CameraClipPlanes[4];
+
+bool VertexIsBelowClipPlane (float3 _vertex, int _planeIndex, float _bias) 
+{
+    float4 plane = _CameraClipPlanes[_planeIndex];
+    return dot(float4(_vertex, 1), plane) < _bias;
+}
+bool VertexIsCulled(float3 _camPos, float3 _grassPos, float _bias)
+{
+    float dist = distance(_camPos, _grassPos);
+
+    return dist >= _LODCutoff ||
+            VertexIsBelowClipPlane(_grassPos, 0, _bias) ||
+		    VertexIsBelowClipPlane(_grassPos, 1, _bias) ||
+		    VertexIsBelowClipPlane(_grassPos, 2, _bias) ||
+		    VertexIsBelowClipPlane(_grassPos, 3, _bias);
+}
+
+[numthreads(64,1,1)]
+void AppendCulledGrass (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x >= _TotalInstances) return;
+
+    float3 grassPos = grassDataBuffer[id.x].position;
+
+    if(VertexIsCulled(_CamPos, grassPos, -_CullingBias))
+        return;
+
+    culledGrassBuffer.Append(grassDataBuffer[id.x]);
+}

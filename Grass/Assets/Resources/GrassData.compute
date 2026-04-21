@@ -1,29 +1,63 @@
-#pragma kernel GetGrassData
+#pragma kernel GetGrassData2D
+#pragma kernel GetGrassData3D
 
 #include "Assets/Resources/Simplex.compute"
 
-struct GrassData 
+struct GrassData2D 
+{
+    float3 position;
+    float displacement;
+};
+struct GrassData3D
 {
     float3 position;
     float2 uv;
     float displacement;
 };
 
-RWStructuredBuffer<GrassData> grassDataBuffer;
+RWStructuredBuffer<GrassData2D> grassData2DBuffer;
+RWStructuredBuffer<GrassData3D> grassData3DBuffer;
 
 uint grassFieldResolution, grassDensity;
 
 Texture2D<float4> _HeightMap;
 SamplerState sampler_HeightMap;
 
-float _DisplacementStrength;
-
 [numthreads(8,8,1)]
-void GetGrassData (uint3 id : SV_DispatchThreadID)
+void GetGrassData2D (uint3 id : SV_DispatchThreadID)
 {
     if (id.x >= grassFieldResolution || id.y >= grassFieldResolution) return;
 
-    GrassData grassData;
+    GrassData2D grassData;
+
+    // calculate positions
+    float3 grassPos = 0.0f;
+    grassPos.xz = id.xy - (float)grassFieldResolution * 0.5f + 0.5f;
+    grassPos.xz *= (1.0f / float(grassDensity));
+
+    // offset position with noise
+    grassPos.x += snoise(float3(grassPos.xz, 0.0f) * 3.0f) * 0.732f;
+    grassPos.z += snoise(float3(grassPos.xz, 0.0f) * 4.0f) * 0.648f;
+
+    // offset height with noise
+    float2 uv = id.xy / float(grassFieldResolution);
+    float3 noise = _HeightMap.SampleLevel(sampler_HeightMap, uv, 0).rgb;
+    float displacement = dot(noise, float3(0.2126, 0.7152, 0.0722));
+
+    // finalizing buffer
+    grassData.position = grassPos;
+    grassData.displacement = displacement;
+
+    uint index = id.y * grassFieldResolution + id.x;
+    grassData2DBuffer[index] = grassData;
+}
+
+[numthreads(8,8,1)]
+void GetGrassData3D (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= grassFieldResolution || id.y >= grassFieldResolution) return;
+
+    GrassData3D grassData;
 
     // calculate positions
     float3 grassPos = 0.0f;
@@ -39,9 +73,7 @@ void GetGrassData (uint3 id : SV_DispatchThreadID)
 
     // offset height with noise
     float3 noise = _HeightMap.SampleLevel(sampler_HeightMap, uv, 0).rgb;
-    float luminance = dot(noise, float3(0.2126, 0.7152, 0.0722));
-    float normalizedDisplacement = luminance;
-    float displacement = normalizedDisplacement * _DisplacementStrength;
+    float displacement = dot(noise, float3(0.2126, 0.7152, 0.0722));
 
     // finalizing buffer
     grassData.position = grassPos;
@@ -49,5 +81,5 @@ void GetGrassData (uint3 id : SV_DispatchThreadID)
     grassData.displacement = displacement;
 
     uint index = id.y * grassFieldResolution + id.x;
-    grassDataBuffer[index] = grassData;
+    grassData3DBuffer[index] = grassData;
 }

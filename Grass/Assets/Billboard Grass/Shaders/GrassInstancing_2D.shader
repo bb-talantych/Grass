@@ -24,14 +24,13 @@ Shader "_BB/2D Grass Shader"
 
             #include "UnityPBSLighting.cginc"
 
-            struct GrassData 
+            struct GrassData2D 
             {
                 float3 position;
-                float2 uv;
                 float displacement;
             };
 
-            StructuredBuffer<GrassData> grassDataBuffer;
+            StructuredBuffer<GrassData2D> grassDataBuffer;
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
@@ -126,13 +125,8 @@ Shader "_BB/2D Grass Shader"
 
                 // get values from command buffer
                 float3 offset = grassDataBuffer[id].position;
-                float displacement = grassDataBuffer[id].displacement;
-                
-                float normalizedDisplacement = 0;
-                if(_DisplacementStrength != 0)
-                {
-                    normalizedDisplacement = displacement * (1 / _DisplacementStrength);
-                }
+                float normalizedDisplacement = grassDataBuffer[id].displacement;
+                float displacement = normalizedDisplacement * _DisplacementStrength;   
 
                 // adjust vertex position
                 offset.y += OFFSET_Y;

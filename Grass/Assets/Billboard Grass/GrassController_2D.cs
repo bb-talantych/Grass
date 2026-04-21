@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using static System.Runtime.InteropServices.Marshal;
+
 public class GrassController_2D : MonoBehaviour
 {
     [Header("Generation Properties")]
@@ -41,8 +43,13 @@ public class GrassController_2D : MonoBehaviour
     public ComputeShader grassComputeShader;
     public Texture2D heightTex;
 
-    private int kernelIndex, threadGroups;
     private ComputeBuffer grassDataBuffer, argsBuffer;
+
+    struct GrassData2D
+    {
+        public Vector3 position;
+        public float displacement;
+    }
 
     void Start()
     {
@@ -59,10 +66,6 @@ public class GrassController_2D : MonoBehaviour
 
     void Update()
     {
-        grassComputeShader.SetFloat("_DisplacementStrength", displacementStrength);
-        grassComputeShader.SetTexture(kernelIndex, "_HeightMap", heightTex);
-        grassComputeShader.Dispatch(kernelIndex, threadGroups, threadGroups, 1);
-
         grassMaterial.SetVector("_CamPos", Camera.main.transform.position);
         grassMaterial2.SetVector("_CamPos", Camera.main.transform.position);
         grassMaterial3.SetVector("_CamPos", Camera.main.transform.position);
@@ -127,16 +130,14 @@ public class GrassController_2D : MonoBehaviour
     {
         int grassFieldResolution = grassFieldSize * grassDensity;
         int totalInstances = grassFieldResolution * grassFieldResolution;
-        kernelIndex = grassComputeShader.FindKernel("GetGrassData");
-        threadGroups = Mathf.CeilToInt(grassFieldResolution / 8f);
-        int totalSize = sizeof(float) * 3 + sizeof(float) * 2 + sizeof(float);
+        int kernelIndex = grassComputeShader.FindKernel("GetGrassData2D");
+        int threadGroups = Mathf.CeilToInt(grassFieldResolution / 8f);
 
-        grassDataBuffer = new ComputeBuffer(totalInstances, totalSize);
+        grassDataBuffer = new ComputeBuffer(totalInstances, SizeOf(typeof(GrassData2D)));
 
-        grassComputeShader.SetBuffer(kernelIndex, "grassDataBuffer", grassDataBuffer);
+        grassComputeShader.SetBuffer(kernelIndex, "grassData2DBuffer", grassDataBuffer);
         grassComputeShader.SetInt("grassFieldResolution", grassFieldResolution);
         grassComputeShader.SetInt("grassDensity", grassDensity);
-        grassComputeShader.SetFloat("_DisplacementStrength", displacementStrength);
         grassComputeShader.SetTexture(kernelIndex, "_HeightMap", heightTex);
         grassComputeShader.Dispatch(kernelIndex, threadGroups, threadGroups, 1);
 
