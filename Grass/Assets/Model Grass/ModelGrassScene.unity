@@ -579,12 +579,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   grassFieldSize: 300
   grassDensity: 5
-  displacementStrength: 1
+  windDir: {x: 1, y: 0}
+  windSpeed: 4
+  frequency: 0.33
+  windStrength: 1
   baseColor: {r: 0.09569933, g: 0.2641509, b: 0.06852973, a: 0}
   tipColor: {r: 0.8584906, g: 0.8019983, b: 0.1012371, a: 0}
-  windDirection: {x: 1, y: 0.5, z: 0}
-  lowGrassAnimationSpeed: 1.2
-  highGrassAnimationSpeed: 0.47
+  displacementStrength: 1.55
   cullingBias: 0.25
   cullingBias_Down: 1.75
   lodCutoff: 100
@@ -592,6 +593,7 @@ MonoBehaviour:
   grassMaterial: {fileID: 2100000, guid: 93f68c98d94fb9049b0e6c6a67fa2fd1, type: 2}
   grassDataCompute: {fileID: 7200000, guid: a47016811fffa6a46a323bb7985e7732, type: 3}
   cullGrassCompute: {fileID: 7200000, guid: 474f6a87a11660543a472eb639b9ce4b, type: 3}
+  windNoiseCompute: {fileID: 7200000, guid: 3bb75b5d782858d4fbc00424e4cddc76, type: 3}
   heightTex: {fileID: 2800000, guid: 4fc65e3fe400dfe47841db93f72913fa, type: 3}
 --- !u!1 &1970124443 stripped
 GameObject:

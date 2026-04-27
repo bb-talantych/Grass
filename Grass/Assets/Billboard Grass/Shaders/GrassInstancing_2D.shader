@@ -140,7 +140,7 @@ Shader "_BB/2D Grass Shader"
                 // animation
                 float animationSpeed = lerp(_LowGrassAnimationSpeed, _HighGrassAnimationSpeed, normalizedDisplacement);
                 float normalizedAnimationTime = sin(_Time.y * animationSpeed) * 0.5 + 0.5;
-                float animationTime = lerp(-0.47, 1, normalizedAnimationTime) * (0.5, 1, normalizedDisplacement);
+                float animationTime = lerp(-0.47, 1, normalizedAnimationTime) * lerp(0.5, 1, normalizedDisplacement);
                 offset += normalize(_WindDir) * animationTime * v.uv.y;
 
                 // calcuate vertex world position and distance to Camera

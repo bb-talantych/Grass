@@ -8,6 +8,7 @@ MonoImporter:
   - grassMaterial: {fileID: 2100000, guid: 93f68c98d94fb9049b0e6c6a67fa2fd1, type: 2}
   - grassDataCompute: {fileID: 7200000, guid: a47016811fffa6a46a323bb7985e7732, type: 3}
   - cullGrassCompute: {fileID: 7200000, guid: 474f6a87a11660543a472eb639b9ce4b, type: 3}
+  - windNoiseCompute: {fileID: 7200000, guid: 3bb75b5d782858d4fbc00424e4cddc76, type: 3}
   - heightTex: {fileID: 2800000, guid: 4fc65e3fe400dfe47841db93f72913fa, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}

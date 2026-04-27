@@ -29,14 +29,13 @@ Shader "_BB/3D Grass Shader"
                 float2 uv;
                 float displacement;
             };
-
             StructuredBuffer<GrassData3D> grassDataBuffer;
 
             float3 _BaseColor, _TipColor;
             float4 _Color;
 
-            float  _LowGrassAnimationSpeed, _HighGrassAnimationSpeed;
-            float3  _WindDir;
+            float2 _WindDir;
+            sampler2D _WindTex;
             float  _DisplacementStrength;
 
             struct appdata
@@ -52,6 +51,7 @@ Shader "_BB/3D Grass Shader"
                 float4 vertex : SV_POSITION;
 
                 float normalizedDisplacement : TEXCOORD1;
+                float2 grassUV : TEXCOORD2;
             };
 
             float hash(uint n) 
@@ -88,10 +88,13 @@ Shader "_BB/3D Grass Shader"
                 offset.y += (displacement * v.uv.y);
 
                 // animation
-                float animationSpeed = lerp(_LowGrassAnimationSpeed, _HighGrassAnimationSpeed, normalizedDisplacement);
-                float normalizedAnimationTime = sin(_Time.y * animationSpeed) * 0.5 + 0.5;
-                float animationTime = lerp(-0.47, 1, normalizedAnimationTime) * (0.5, 1, normalizedDisplacement);
-                offset += normalize(_WindDir) * animationTime * v.uv.y;
+                float4 windSampleUV = float4(grassUV, 0, 0);
+                float4 windTex = tex2Dlod(_WindTex, windSampleUV);
+                float windValue = LinearRgbToLuminance(windTex.rgb);
+                float windPower = lerp(-0.47, 1, windValue)
+                * lerp(1, 0.65, normalizedDisplacement);
+
+                offset.xz += _WindDir * windPower * v.uv.y;
 
                 // calcuate vertex world position and distance to Camera
                 int seed = 3235523;
@@ -103,6 +106,7 @@ Shader "_BB/3D Grass Shader"
                 o.vertex = UnityObjectToClipPos(worldPos);
                 o.uv = v.uv;
                 o.normalizedDisplacement = normalizedDisplacement;
+                o.grassUV = grassUV;
 
                 return o;
             }
@@ -125,6 +129,9 @@ Shader "_BB/3D Grass Shader"
                 finalColor = finalColor * ndotl;
 
                 finalColor.rgb = lerp(finalColor, _Color, _Color.a);
+
+                //finalColor.rgb = tex2D(_WindTex, i.grassUV).r;
+
                 return float4(finalColor, 1);
             }
             ENDCG
