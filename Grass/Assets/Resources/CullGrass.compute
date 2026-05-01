@@ -6,9 +6,22 @@ struct GrassData3D
     float2 uv;
     float displacement;
 };
+struct CullingData
+{
+    float3 grassPos;
+    float3 camPos;
+
+    float lodCutoff;
+    float cullingBias;
+    float cullingBias_Down;
+};
 
 RWStructuredBuffer<GrassData3D> grassDataBuffer;
 AppendStructuredBuffer<GrassData3D> culledGrassBuffer;
+
+Texture2D<float> _CameraDepthTexture;
+SamplerState sampler_CameraDepthTexture;
+float4x4 _ViewProjectionMatrix, _CameraProjectionToWorld;
 
 float _TotalInstances;
 
@@ -16,20 +29,50 @@ float3 _CamPos;
 float _LODCutoff, _CullingBias, _CullingBias_Down;
 float4 _CameraClipPlanes[4];
 
-bool VertexIsBelowClipPlane (float3 _vertex, int _planeIndex, float _bias) 
+float3 GetWorldPos(float2 _uv, float _depth)
+{
+    float4 viewPosH = float4(_uv * 2.0 - 1.0, _depth, 1.0);
+    float4 worldPosH = mul(_CameraProjectionToWorld, viewPosH);
+
+    return worldPosH.xyz / worldPosH.w;
+}
+bool IsOcclusionCulled(float3 _grassPos, float3 _camPos)
+{
+    float4 clipPos  = mul(_ViewProjectionMatrix, float4(_grassPos, 1));
+    float3 ndc = clipPos.xyz / clipPos.w;
+    float2 screenPos = ndc.xy * 0.5 + 0.5;
+
+    float depth = _CameraDepthTexture.SampleLevel(sampler_CameraDepthTexture, screenPos, 0);
+    float3 worldPos = GetWorldPos(screenPos, depth);
+
+    float distToGrass = distance(_camPos, _grassPos);
+    float distToDepth = distance(_camPos, worldPos);
+
+    float bias = 0.5;
+    return distToDepth + bias < distToGrass;
+}
+bool VertexIsBelowClipPlane (float3 _grassPos, int _planeIndex, float _bias) 
 {
     float4 plane = _CameraClipPlanes[_planeIndex];
-    return dot(float4(_vertex, 1), plane) < _bias;
+    return dot(float4(_grassPos, 1), plane) < _bias;
 }
-bool VertexIsCulled(float3 _camPos, float3 _grassPos, float _bias)
+bool IsFrustumCulled(float3 _grassPos, float _bias, float _bias_down)
+{
+    return  VertexIsBelowClipPlane(_grassPos, 2, -_bias_down) ||
+            VertexIsBelowClipPlane(_grassPos, 0, -_bias) ||
+		    VertexIsBelowClipPlane(_grassPos, 1, -_bias) ||
+		    VertexIsBelowClipPlane(_grassPos, 3, -_bias);
+}
+bool IsDistCulled(float3 _grassPos, float3 _camPos, float _lodCutoff)
 {
     float dist = distance(_camPos, _grassPos);
-
-    return dist >= _LODCutoff ||
-            VertexIsBelowClipPlane(_grassPos, 0, _bias) ||
-		    VertexIsBelowClipPlane(_grassPos, 1, _bias) ||
-		    VertexIsBelowClipPlane(_grassPos, 2, -_CullingBias_Down) ||
-		    VertexIsBelowClipPlane(_grassPos, 3, _bias);
+    return dist >= _lodCutoff;
+}
+bool IsCulled(CullingData _data)
+{
+    return  IsDistCulled(_data.grassPos, _data.camPos, _data.lodCutoff) ||
+            IsFrustumCulled(_data.grassPos, _data.cullingBias, _data.cullingBias_Down) ||
+            IsOcclusionCulled(_data.grassPos, _data.camPos);
 }
 
 [numthreads(64,1,1)]
@@ -37,9 +80,17 @@ void AppendCulledGrass (uint3 id : SV_DispatchThreadID)
 {
     if(id.x >= _TotalInstances) return;
 
-    float3 grassPos = grassDataBuffer[id.x].position;
+    
 
-    if(VertexIsCulled(_CamPos, grassPos, -_CullingBias))
+    CullingData data;
+
+    data.grassPos = grassDataBuffer[id.x].position;
+    data.camPos = _CamPos;
+    data.lodCutoff = _LODCutoff;
+    data.cullingBias = _CullingBias;
+    data.cullingBias_Down = _CullingBias_Down;
+
+    if(IsCulled(data))
         return;
 
     culledGrassBuffer.Append(grassDataBuffer[id.x]);

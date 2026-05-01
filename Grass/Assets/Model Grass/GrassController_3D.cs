@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Runtime.InteropServices;
 
 using static System.Runtime.InteropServices.Marshal;
 
@@ -40,10 +41,11 @@ public class GrassController_3D : MonoBehaviour
     public Texture2D heightTex;
 
     private ComputeBuffer grassDataBuffer, culledGrassBuffer, argsBuffer, argsCopyCountBuffer;
-    private int culledGrassKernelIndex, windNoiseKernelIndex;
-    private int culledGrassThreadGroups, windNoiseThreadGroups;
+    private int cullGrassKernelIndex, windNoiseKernelIndex;
+    private int cullGrassThreadGroups, windNoiseThreadGroups;
     private RenderTexture windNoiseTexture;
-
+    private Camera cam;
+    private RenderTexture depthRT;
     private struct GrassData3D
     {
         public Vector3 position;
@@ -53,6 +55,15 @@ public class GrassController_3D : MonoBehaviour
 
     void Start()
     {
+        cam = Camera.main;
+
+        int width = 480;
+        int height = 270;
+        depthRT = new RenderTexture(width, height, 24, RenderTextureFormat.Depth);
+        cam.targetTexture = depthRT;
+        cam.Render();
+        cam.targetTexture = null;
+
         int windTexSize = 1024;
         InitializeData(windTexSize);
 
@@ -60,14 +71,25 @@ public class GrassController_3D : MonoBehaviour
 
     void Update()
     {
-        cullGrassCompute.SetVector("_CamPos", Camera.main.transform.position);
+        cam.targetTexture = depthRT;
+        cam.Render();
+        cam.targetTexture = null;
+
+        cullGrassCompute.SetTexture(cullGrassKernelIndex, "_CameraDepthTexture", depthRT);
+        
+        Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(cam.projectionMatrix, false);
+        Matrix4x4 viewProjMatrix = projMatrix * cam.worldToCameraMatrix;
+        cullGrassCompute.SetMatrix("_ViewProjectionMatrix", viewProjMatrix);
+        cullGrassCompute.SetMatrix("_CameraProjectionToWorld", Matrix4x4.Inverse(viewProjMatrix));
+        
+        cullGrassCompute.SetVector("_CamPos", cam.transform.position);
         cullGrassCompute.SetFloat("_LODCutoff", lodCutoff);
         cullGrassCompute.SetFloat("_CullingBias", cullingBias);
         cullGrassCompute.SetFloat("_CullingBias_Down", cullingBias_Down);
-        cullGrassCompute.SetVectorArray("_CameraClipPlanes", GetViewFrustumPlaneNormals(Camera.main));
+        cullGrassCompute.SetVectorArray("_CameraClipPlanes", GetViewFrustumPlaneNormals(cam));
 
         culledGrassBuffer.SetCounterValue(0);
-        cullGrassCompute.Dispatch(culledGrassKernelIndex, culledGrassThreadGroups, 1, 1);
+        cullGrassCompute.Dispatch(cullGrassKernelIndex, cullGrassThreadGroups, 1, 1);
 
         uint[] argsData = new uint[5]
          {
@@ -81,7 +103,7 @@ public class GrassController_3D : MonoBehaviour
 
         GenerateWind();
 
-        grassMaterial.SetVector("_CamPos", Camera.main.transform.position);
+        grassMaterial.SetVector("_CamPos", cam.transform.position);
 
         grassMaterial.SetColor("_BaseColor", baseColor);
         grassMaterial.SetColor("_TipColor", tipColor);
@@ -115,14 +137,14 @@ public class GrassController_3D : MonoBehaviour
         grassDataCompute.Dispatch(grassDataKernelIndex, grassDataThreadGroups, grassDataThreadGroups, 1);
 
         // CullGrass
-        culledGrassKernelIndex = cullGrassCompute.FindKernel("AppendCulledGrass");
-        culledGrassThreadGroups = Mathf.CeilToInt(totalInstances / 64f);
+        cullGrassKernelIndex = cullGrassCompute.FindKernel("AppendCulledGrass");
+        cullGrassThreadGroups = Mathf.CeilToInt(totalInstances / 64f);
 
         culledGrassBuffer = new ComputeBuffer(totalInstances, SizeOf(typeof(GrassData3D)), ComputeBufferType.Append);
 
         cullGrassCompute.SetFloat("_TotalInstances", totalInstances);
-        cullGrassCompute.SetBuffer(culledGrassKernelIndex, "grassDataBuffer", grassDataBuffer);
-        cullGrassCompute.SetBuffer(culledGrassKernelIndex, "culledGrassBuffer", culledGrassBuffer);
+        cullGrassCompute.SetBuffer(cullGrassKernelIndex, "grassDataBuffer", grassDataBuffer);
+        cullGrassCompute.SetBuffer(cullGrassKernelIndex, "culledGrassBuffer", culledGrassBuffer);
 
         // argsBuffer
         argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
