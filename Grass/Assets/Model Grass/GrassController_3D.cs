@@ -83,6 +83,7 @@ public class GrassController_3D : MonoBehaviour
         cullGrassCompute.SetMatrix("_CameraProjectionToWorld", Matrix4x4.Inverse(viewProjMatrix));
         
         cullGrassCompute.SetVector("_CamPos", cam.transform.position);
+        cullGrassCompute.SetFloat("_DisplacementStrength", displacementStrength);
         cullGrassCompute.SetFloat("_LODCutoff", lodCutoff);
         cullGrassCompute.SetFloat("_CullingBias", cullingBias);
         cullGrassCompute.SetFloat("_CullingBias_Down", cullingBias_Down);

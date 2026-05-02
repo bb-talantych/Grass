@@ -11,6 +11,8 @@ struct CullingData
     float3 grassPos;
     float3 camPos;
 
+    float displacement;
+
     float lodCutoff;
     float cullingBias;
     float cullingBias_Down;
@@ -28,6 +30,7 @@ float _TotalInstances;
 float3 _CamPos;
 float _LODCutoff, _CullingBias, _CullingBias_Down;
 float4 _CameraClipPlanes[4];
+float _DisplacementStrength;
 
 float3 GetWorldPos(float2 _uv, float _depth)
 {
@@ -36,11 +39,15 @@ float3 GetWorldPos(float2 _uv, float _depth)
 
     return worldPosH.xyz / worldPosH.w;
 }
-bool IsOcclusionCulled(float3 _grassPos, float3 _camPos)
+float2 GetScreenPos(float3 _worldPos)
 {
-    float4 clipPos  = mul(_ViewProjectionMatrix, float4(_grassPos, 1));
+    float4 clipPos  = mul(_ViewProjectionMatrix, float4(_worldPos, 1));
     float3 ndc = clipPos.xyz / clipPos.w;
-    float2 screenPos = ndc.xy * 0.5 + 0.5;
+    return ndc.xy * 0.5 + 0.5;
+}
+bool IsOccluded(float3 _grassPos, float3 _camPos, float3 _offset)
+{
+    float2 screenPos = GetScreenPos(_grassPos + _offset);
 
     float depth = _CameraDepthTexture.SampleLevel(sampler_CameraDepthTexture, screenPos, 0);
     float3 worldPos = GetWorldPos(screenPos, depth);
@@ -48,8 +55,50 @@ bool IsOcclusionCulled(float3 _grassPos, float3 _camPos)
     float distToGrass = distance(_camPos, _grassPos);
     float distToDepth = distance(_camPos, worldPos);
 
-    float bias = 0.5;
+    float bias = 0.25;
     return distToDepth + bias < distToGrass;
+}
+bool IsOcclusionCulled(float3 _grassPos, float3 _camPos, float _displacement)
+{
+    // if the point isn't occluded then stop, keep it
+    bool test0 = !IsOccluded(_grassPos, _camPos, 0);
+
+    if(test0)
+    {
+        return false;
+    }
+    
+    // if point is occluded, then try to check if enought bounding box points peek 
+    float boxWidth = 2.25;
+    float boxHeight = _displacement;
+    float boxDepth = boxWidth;
+
+    const int offsetsCount = 8;
+    float3 offsetsArr[offsetsCount] =
+    {   
+        float3(boxWidth, 0, boxDepth),
+        float3(-boxWidth, 0, boxDepth),
+        float3(boxWidth, 0, -boxDepth),
+        float3(-boxWidth, 0, -boxDepth),
+        float3(boxWidth, boxHeight, boxDepth),
+        float3(-boxWidth, boxHeight, boxDepth),
+        float3(boxWidth, boxHeight, -boxDepth),
+        float3(-boxWidth, boxHeight, -boxDepth)
+    };
+    
+    float test1 = !IsOccluded(_grassPos, _camPos, offsetsArr[0]);
+    float test2 = !IsOccluded(_grassPos, _camPos, offsetsArr[1]);
+    float test3 = !IsOccluded(_grassPos, _camPos, offsetsArr[2]);
+    float test4 = !IsOccluded(_grassPos, _camPos, offsetsArr[3]);
+    float test5 = !IsOccluded(_grassPos, _camPos, offsetsArr[4]);
+    float test6 = !IsOccluded(_grassPos, _camPos, offsetsArr[5]);
+    float test7 = !IsOccluded(_grassPos, _camPos, offsetsArr[6]);
+    float test8 = !IsOccluded(_grassPos, _camPos, offsetsArr[7]);
+
+    float totalNotOccludedPoints = test1 + test2 + test3 + test4 + test5 + test6 + test7 + test8;
+
+    float minNumNotOccludedPoints = 3;
+    return totalNotOccludedPoints < minNumNotOccludedPoints;
 }
 bool VertexIsBelowClipPlane (float3 _grassPos, int _planeIndex, float _bias) 
 {
@@ -72,7 +121,7 @@ bool IsCulled(CullingData _data)
 {
     return  IsDistCulled(_data.grassPos, _data.camPos, _data.lodCutoff) ||
             IsFrustumCulled(_data.grassPos, _data.cullingBias, _data.cullingBias_Down) ||
-            IsOcclusionCulled(_data.grassPos, _data.camPos);
+            IsOcclusionCulled(_data.grassPos, _data.camPos, _data.displacement);
 }
 
 [numthreads(64,1,1)]
@@ -80,12 +129,10 @@ void AppendCulledGrass (uint3 id : SV_DispatchThreadID)
 {
     if(id.x >= _TotalInstances) return;
 
-    
-
     CullingData data;
-
     data.grassPos = grassDataBuffer[id.x].position;
     data.camPos = _CamPos;
+    data.displacement =  grassDataBuffer[id.x].displacement * _DisplacementStrength;
     data.lodCutoff = _LODCutoff;
     data.cullingBias = _CullingBias;
     data.cullingBias_Down = _CullingBias_Down;
