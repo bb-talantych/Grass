@@ -1,0 +1,255 @@
+#pragma kernel CullChunk
+#pragma kernel CullGrass
+
+struct GrassData3D 
+{
+    float3 position;
+    float2 uv;
+    float displacement;
+};
+struct ChunkCullingData
+{
+    float3 chunkCenter;
+    float3 chunkSize;
+
+    float3 camPos;
+
+    float displacement;
+
+    float lodCutoff;
+    float cullingBias;
+    float cullingBias_Down;
+};
+struct GrassCullingData
+{
+    float3 grassPos;
+    float3 camPos;
+
+    float displacement;
+
+    float lodCutoff;
+    float cullingBias;
+    float cullingBias_Down;
+};
+
+#define PLANES_COUNT 4
+
+StructuredBuffer<float3> chunksCenterBuffer;
+RWStructuredBuffer<int> culledChunksBuffer;
+RWStructuredBuffer<GrassData3D> grassDataBuffer;
+AppendStructuredBuffer<GrassData3D> culledGrassBuffer;
+
+Texture2D<float> _CameraDepthTexture;
+SamplerState sampler_CameraDepthTexture;
+float4x4 _ViewProjectionMatrix, _CameraProjectionToWorld;
+
+uint _TotalChunks, _TotalChunkGrass;
+
+int _ChunkID;
+float3 _ChunkSize;
+
+float3 _CamPos;
+float _LODCutoff, _CullingBias, _CullingBias_Down;
+float4 _CameraClipPlanes[PLANES_COUNT];
+float _DisplacementStrength;
+
+float3 GetWorldPos(float2 _uv, float _depth)
+{
+    float4 viewPosH = float4(_uv * 2.0 - 1.0, _depth, 1.0);
+    float4 worldPosH = mul(_CameraProjectionToWorld, viewPosH);
+
+    return worldPosH.xyz / worldPosH.w;
+}
+float2 GetScreenPos(float3 _worldPos)
+{
+    float4 clipPos  = mul(_ViewProjectionMatrix, float4(_worldPos, 1));
+    float3 ndc = clipPos.xyz / clipPos.w;
+    return ndc.xy * 0.5 + 0.5;
+}
+bool IsDistCulled(float3 _pos, float3 _camPos, float _lodCutoff)
+{
+    float3 delta = _pos - _camPos;
+    float distSqrd = dot(delta, delta);
+    return distSqrd >= _lodCutoff * _lodCutoff;
+}
+
+bool IsOutsideAABB(float3 _center, float3 _extents, int _planeIndex, float _bias)
+{
+    float4 plane = _CameraClipPlanes[_planeIndex];
+
+    float r =   _extents.x * abs(plane.x) + 
+                _extents.y * abs(plane.y) +
+                _extents.z * abs(plane.z);
+
+    float distToCenter = dot(float4(_center, 1), plane);
+
+    return distToCenter < -(r + _bias);    
+}
+bool IsChunkFrustumCulled(float3 _center, float3 _extents, float _bias, float _bias_down)
+{
+     return IsOutsideAABB(_center, _extents, 2, _bias_down) || 
+            IsOutsideAABB(_center, _extents, 0, _bias) ||
+            IsOutsideAABB(_center, _extents, 1, _bias) || 
+            IsOutsideAABB(_center, _extents, 3, _bias);
+}
+bool IsChunkDistCulled(float3 _center, float3 _extents, float3 _camPos, float _lodCutoff)
+{
+    // testing
+    //float3 test0 = _center - _extents;
+    //float3 test1 = _center + _extents;
+
+    //return  test0.x >= _camPos.x + _lodCutoff ||
+    //        test0.z >= _camPos.z + _lodCutoff ||
+    //        test1.x <= _camPos.x - _lodCutoff ||
+    //        test1.z <= _camPos.z - _lodCutoff;
+
+    const int offsetsCount = 4;
+    float3 offsetsArr[offsetsCount] =
+    {   
+        float3(_extents.x, 0, _extents.z),
+        float3(-_extents.x, 0, _extents.z),
+        float3(_extents.x, 0, -_extents.z),
+        float3(-_extents.x, 0, -_extents.z),
+    };
+
+    for(int i = 0; i < offsetsCount; i++)
+    {
+        float3 boundsCorner = _center;
+        boundsCorner.x += offsetsArr[i].x;
+        boundsCorner.y = _camPos.y;
+        boundsCorner.z += offsetsArr[i].z;
+
+        if(!IsDistCulled(boundsCorner, _camPos, _lodCutoff))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+bool IsChunkCulled(ChunkCullingData _data)
+{
+    float extentsWidth = _data.chunkSize.x * 0.5;
+    float extentsHeight = _data.displacement;
+    float extentsDepth = _data.chunkSize.z * 0.5;
+    float3 extents = float3(extentsWidth, extentsHeight, extentsDepth);
+
+        // _data.chunkCenter
+        // xz are centered, y == ground == 0
+    return  IsChunkDistCulled(_data.chunkCenter, extents, _data.camPos, _data.lodCutoff) || 
+            IsChunkFrustumCulled(_data.chunkCenter, extents, _data.cullingBias, _data.cullingBias_Down);
+}
+[numthreads(64,1,1)]
+void CullChunk (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x >= _TotalChunks) return;
+
+    ChunkCullingData chunkData;
+    chunkData.chunkCenter = chunksCenterBuffer[id.x];
+    chunkData.chunkSize = _ChunkSize;
+    chunkData.camPos = _CamPos;
+    chunkData.displacement = _DisplacementStrength;
+    chunkData.lodCutoff = _LODCutoff;
+    chunkData.cullingBias = _CullingBias;
+    chunkData.cullingBias_Down = _CullingBias_Down;
+
+    culledChunksBuffer[id.x] = IsChunkCulled(chunkData) ? 0 : 1;
+}
+
+bool IsOccluded(float3 _grassPos, float3 _camPos, float3 _offset)
+{
+    float2 screenPos = GetScreenPos(_grassPos + _offset);
+    screenPos = saturate(screenPos);
+
+    float depth = _CameraDepthTexture.SampleLevel(sampler_CameraDepthTexture, screenPos, 0);
+    float3 worldPos = GetWorldPos(screenPos, depth);
+
+    float3 deltaGrass = _grassPos - _camPos;
+    float distToGrass = dot(deltaGrass, deltaGrass);
+
+    float3 deltaDepth = worldPos - _camPos;
+    float distToDepth = dot(deltaDepth, deltaDepth);
+
+    return distToDepth < distToGrass;
+}
+bool IsOcclusionCulled(float3 _grassPos, float3 _camPos, float _displacement)
+{
+    float boxWidth = 0.75;
+    float boxHeight = _displacement;
+    float boxDepth = boxWidth;
+
+    const int offsetsCount = 8;
+    float3 offsetsArr[offsetsCount] =
+    {   
+        float3(boxWidth, 0, boxDepth),
+        float3(-boxWidth, 0, boxDepth),
+        float3(boxWidth, 0, -boxDepth),
+        float3(-boxWidth, 0, -boxDepth),
+
+        float3(boxWidth, boxHeight, boxDepth),
+        float3(-boxWidth, boxHeight, boxDepth),
+        float3(boxWidth, boxHeight, -boxDepth),
+        float3(-boxWidth, boxHeight, -boxDepth)
+    };
+
+    return  IsOccluded(_grassPos, _camPos, offsetsArr[4]) &&
+            IsOccluded(_grassPos, _camPos, offsetsArr[5]) &&
+            IsOccluded(_grassPos, _camPos, offsetsArr[6]) &&
+            IsOccluded(_grassPos, _camPos, offsetsArr[7]);
+    
+    //for(int i = 0; i < offsetsCount; i++)
+    //{
+    //    if(!IsOccluded(_grassPos, _camPos, offsetsArr[i]))
+    //    {
+    //        return false;
+    //    }
+    //}
+
+    //return true;
+}
+bool PosIsBelowClipPlane (float3 _pos, int _planeIndex, float _bias) 
+{
+    float4 plane = _CameraClipPlanes[_planeIndex];
+    return dot(float4(_pos, 1), plane) < _bias;
+}
+bool IsFrustumCulled(float3 _pos, float _bias, float _bias_down)
+{
+    // testing 
+    //float4 clipPos  = mul(_ViewProjectionMatrix, float4(_pos, 1));
+    //float3 ndc = clipPos.xyz / clipPos.w;
+    //ndc.xy = ndc.xy * 0.5 + 0.5;
+    //ndc.z = clipPos.w;
+
+    //return  ndc.x < -_bias || ndc.x > 1 + _bias ||
+    //        ndc.y < -_bias_down || ndc.y > 1 + _bias ||
+    //        ndc.z <= -0.1f;
+
+    return  PosIsBelowClipPlane(_pos, 2, -_bias_down) ||
+            PosIsBelowClipPlane(_pos, 0, -_bias) ||
+		    PosIsBelowClipPlane(_pos, 1, -_bias) ||
+		    PosIsBelowClipPlane(_pos, 3, -_bias);
+}
+bool IsGrassCulled(GrassCullingData _data)
+{
+    return  IsDistCulled(_data.grassPos, _data.camPos, _data.lodCutoff) ||
+            IsFrustumCulled(_data.grassPos, _data.cullingBias, _data.cullingBias_Down) ||
+            IsOcclusionCulled(_data.grassPos, _data.camPos, _data.displacement);
+}
+[numthreads(64,1,1)]
+void CullGrass (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x >= _TotalChunkGrass) return;
+    if(culledChunksBuffer[_ChunkID] == 0) return;
+
+    GrassCullingData grassData;
+    grassData.grassPos = grassDataBuffer[id.x].position;
+    grassData.camPos = _CamPos;
+    grassData.displacement =  grassDataBuffer[id.x].displacement * _DisplacementStrength;
+    grassData.lodCutoff = _LODCutoff;
+    grassData.cullingBias = _CullingBias;
+    grassData.cullingBias_Down = _CullingBias_Down;
+
+    if(IsGrassCulled(grassData))
+        return;
+
+    culledGrassBuffer.Append(grassDataBuffer[id.x]);
+}

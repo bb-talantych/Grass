@@ -1,4 +1,4 @@
-#pragma kernel AppendCulledGrass
+#pragma kernel AppendGrassData
 
 struct GrassData3D 
 {
@@ -55,21 +55,11 @@ bool IsOccluded(float3 _grassPos, float3 _camPos, float3 _offset)
     float distToGrass = distance(_camPos, _grassPos);
     float distToDepth = distance(_camPos, worldPos);
 
-    float bias = 0.25;
-    return distToDepth + bias < distToGrass;
+    return distToDepth < distToGrass;
 }
 bool IsOcclusionCulled(float3 _grassPos, float3 _camPos, float _displacement)
 {
-    // if the point isn't occluded then stop, keep it
-    bool test0 = !IsOccluded(_grassPos, _camPos, 0);
-
-    if(test0)
-    {
-        return false;
-    }
-    
-    // if point is occluded, then try to check if enought bounding box points peek 
-    float boxWidth = 2.25;
+    float boxWidth = 0.75;
     float boxHeight = _displacement;
     float boxDepth = boxWidth;
 
@@ -86,19 +76,14 @@ bool IsOcclusionCulled(float3 _grassPos, float3 _camPos, float _displacement)
         float3(-boxWidth, boxHeight, -boxDepth)
     };
     
-    float test1 = !IsOccluded(_grassPos, _camPos, offsetsArr[0]);
-    float test2 = !IsOccluded(_grassPos, _camPos, offsetsArr[1]);
-    float test3 = !IsOccluded(_grassPos, _camPos, offsetsArr[2]);
-    float test4 = !IsOccluded(_grassPos, _camPos, offsetsArr[3]);
-    float test5 = !IsOccluded(_grassPos, _camPos, offsetsArr[4]);
-    float test6 = !IsOccluded(_grassPos, _camPos, offsetsArr[5]);
-    float test7 = !IsOccluded(_grassPos, _camPos, offsetsArr[6]);
-    float test8 = !IsOccluded(_grassPos, _camPos, offsetsArr[7]);
-
-    float totalNotOccludedPoints = test1 + test2 + test3 + test4 + test5 + test6 + test7 + test8;
-
-    float minNumNotOccludedPoints = 3;
-    return totalNotOccludedPoints < minNumNotOccludedPoints;
+    return IsOccluded(_grassPos, _camPos, offsetsArr[0]) &&
+           IsOccluded(_grassPos, _camPos, offsetsArr[1]) &&
+           IsOccluded(_grassPos, _camPos, offsetsArr[2]) &&
+           IsOccluded(_grassPos, _camPos, offsetsArr[3]) &&
+           IsOccluded(_grassPos, _camPos, offsetsArr[4]) &&
+           IsOccluded(_grassPos, _camPos, offsetsArr[5]) &&
+           IsOccluded(_grassPos, _camPos, offsetsArr[6]) &&
+           IsOccluded(_grassPos, _camPos, offsetsArr[7]);
 }
 bool VertexIsBelowClipPlane (float3 _grassPos, int _planeIndex, float _bias) 
 {
@@ -125,7 +110,7 @@ bool IsCulled(CullingData _data)
 }
 
 [numthreads(64,1,1)]
-void AppendCulledGrass (uint3 id : SV_DispatchThreadID)
+void AppendGrassData (uint3 id : SV_DispatchThreadID)
 {
     if(id.x >= _TotalInstances) return;
 
@@ -142,3 +127,4 @@ void AppendCulledGrass (uint3 id : SV_DispatchThreadID)
 
     culledGrassBuffer.Append(grassDataBuffer[id.x]);
 }
+

@@ -130,7 +130,9 @@ Shader "_BB/3D Grass Shader"
 
                 finalColor.rgb = lerp(finalColor, _Color, _Color.a);
 
+                //finalColor.rgb = float3(i.uv, 0);
                 //finalColor.rgb = tex2D(_WindTex, i.grassUV).r;
+                //finalColor.rgb = float3(i.grassUV, 0);
 
                 return float4(finalColor, 1);
             }

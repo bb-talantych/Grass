@@ -603,13 +603,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1036675947}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.52175343, y: 0.0038589449, z: 0.065412834, w: 0.85057604}
+  m_LocalRotation: {x: 0.7223285, y: 0.412013, z: -0.30740806, w: 0.46258748}
   m_LocalPosition: {x: 7.6, y: 0.2, z: 7.5}
   m_LocalScale: {x: 8, y: 8, z: 8}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 62.508, y: 9.328, z: 14.465}
+  m_LocalEulerAnglesHint: {x: 112.84, y: 9.328, z: -53.2}
 --- !u!1 &1640046586 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1996949644332423803, guid: e73db9af4093b814199469aaa0f04e2c, type: 3}
@@ -679,25 +679,28 @@ MonoBehaviour:
   m_GameObject: {fileID: 1679564819}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 25ef6794b244773419eb667a78a375cb, type: 3}
+  m_Script: {fileID: 11500000, guid: 2407c53c4c0b27d44994c4b3dbad48c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   grassFieldSize: 300
-  grassDensity: 5
-  windDir: {x: 1, y: 0}
+  grassDensity: 17
+  numChunks: 5
+  windDir: {x: 1, y: 0.5}
   windSpeed: 4
   frequency: 0.33
-  windStrength: 1
+  windStrength: 2
   baseColor: {r: 0.09569933, g: 0.2641509, b: 0.06852973, a: 0}
   tipColor: {r: 0.8584906, g: 0.8019983, b: 0.1012371, a: 0}
-  displacementStrength: 1.55
-  cullingBias: 0.25
+  displacementStrength: 1
+  cullingBias: 0.55
   cullingBias_Down: 1.75
   lodCutoff: 160
-  grassMesh: {fileID: -462981019419857548, guid: 122edea8244e1f44d86056a05057855f, type: 3}
+  lodGroup0: 0.35
+  grassMesh_LOD0: {fileID: -462981019419857548, guid: 122edea8244e1f44d86056a05057855f, type: 3}
+  grassMesh_LOD1: {fileID: -462981019419857548, guid: 375c4f46861b9e94090e5fa6746a4933, type: 3}
   grassMaterial: {fileID: 2100000, guid: 93f68c98d94fb9049b0e6c6a67fa2fd1, type: 2}
-  grassDataCompute: {fileID: 7200000, guid: a47016811fffa6a46a323bb7985e7732, type: 3}
-  cullGrassCompute: {fileID: 7200000, guid: 474f6a87a11660543a472eb639b9ce4b, type: 3}
+  chunkDataCompute: {fileID: 7200000, guid: 5595809dc20a595459f4e1e11b8136a2, type: 3}
+  cullGrassCompute: {fileID: 7200000, guid: b18b7320204ed8e4e92a33281f6231b0, type: 3}
   windNoiseCompute: {fileID: 7200000, guid: 3bb75b5d782858d4fbc00424e4cddc76, type: 3}
   heightTex: {fileID: 2800000, guid: 4fc65e3fe400dfe47841db93f72913fa, type: 3}
 --- !u!1 &1970124443 stripped

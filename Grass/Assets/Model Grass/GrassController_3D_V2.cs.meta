@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 2407c53c4c0b27d44994c4b3dbad48c4
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - grassMesh_LOD0: {fileID: -462981019419857548, guid: 122edea8244e1f44d86056a05057855f, type: 3}
+  - grassMesh_LOD1: {fileID: -462981019419857548, guid: 375c4f46861b9e94090e5fa6746a4933, type: 3}
+  - grassMaterial: {fileID: 2100000, guid: 93f68c98d94fb9049b0e6c6a67fa2fd1, type: 2}
+  - chunkDataCompute: {fileID: 7200000, guid: 5595809dc20a595459f4e1e11b8136a2, type: 3}
+  - cullGrassCompute: {fileID: 7200000, guid: b18b7320204ed8e4e92a33281f6231b0, type: 3}
+  - windNoiseCompute: {fileID: 7200000, guid: 3bb75b5d782858d4fbc00424e4cddc76, type: 3}
+  - heightTex: {fileID: 2800000, guid: 4fc65e3fe400dfe47841db93f72913fa, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

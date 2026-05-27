@@ -18,7 +18,7 @@ public class GrassController_3D : MonoBehaviour
     public Vector2 windDir = new Vector2(1, 0.5f);
     public float windSpeed = 4.0f;
     public float frequency = 0.33f;
-    public float windStrength = 0.5f;
+    public float windStrength = 2.0f;
 
     [Header("Shader Properties")]
     public Color baseColor = new Color(0.09569933f, 0.2641509f, 0.06852973f, 0);
@@ -32,7 +32,7 @@ public class GrassController_3D : MonoBehaviour
     [Range(0f, 2f)]
     public float cullingBias_Down = 1.75f;
     [Range(0f, 500f)]
-    public float lodCutoff = 100f;
+    public float lodCutoff = 160f;
 
     [Header("Required Assets")]
     public Mesh grassMesh;
@@ -57,8 +57,10 @@ public class GrassController_3D : MonoBehaviour
     {
         cam = Camera.main;
 
-        int width = 480;
-        int height = 270;
+        int multiplier = 2;
+        multiplier = Mathf.Max(multiplier, 1);
+        int width = 480 * multiplier;
+        int height = 270 * multiplier;
         depthRT = new RenderTexture(width, height, 24, RenderTextureFormat.Depth);
         cam.targetTexture = depthRT;
         cam.Render();
@@ -104,8 +106,6 @@ public class GrassController_3D : MonoBehaviour
 
         GenerateWind();
 
-        grassMaterial.SetVector("_CamPos", cam.transform.position);
-
         grassMaterial.SetColor("_BaseColor", baseColor);
         grassMaterial.SetColor("_TipColor", tipColor);
         grassMaterial.SetVector("_WindDir", windDir.normalized);
@@ -138,7 +138,7 @@ public class GrassController_3D : MonoBehaviour
         grassDataCompute.Dispatch(grassDataKernelIndex, grassDataThreadGroups, grassDataThreadGroups, 1);
 
         // CullGrass
-        cullGrassKernelIndex = cullGrassCompute.FindKernel("AppendCulledGrass");
+        cullGrassKernelIndex = cullGrassCompute.FindKernel("AppendGrassData");
         cullGrassThreadGroups = Mathf.CeilToInt(totalInstances / 64f);
 
         culledGrassBuffer = new ComputeBuffer(totalInstances, SizeOf(typeof(GrassData3D)), ComputeBufferType.Append);
