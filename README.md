@@ -3,13 +3,19 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 
 ## Grass Cards + Billboad Grass
 ![](./examples/grass-billboard-v1.gif)
+### Optimization Techniques Used
+* GPU Instancing
+* CPU Distance Culling
+* CPU Frustum Culling
+* Level Of Detail(LOD)
 
-## Optimization Techniques Used
+## 3D Mesh Grass
+### Optimization Techniques Used
 * GPU Instancing
 * Chunking
 * Chunk GPU AABB Frustum Culling
-* GPU/CPU Distance Culling
-* GPU/CPU Frustum Culling
+* GPU Distance Culling
+* GPU Frustum Culling
 * GPU Occlusion Culling
 * Level Of Detail(LOD)
 
