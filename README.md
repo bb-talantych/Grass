@@ -7,9 +7,10 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 * GPU Instancing
 * CPU Distance Culling
 * CPU Frustum Culling
+* Billboarding
 * Level Of Detail(LOD)
 
-## 3D Mesh Grass
+## Model Grass
 ### Optimization Techniques Used
 * GPU Instancing
 * Chunking
@@ -18,6 +19,11 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 * GPU Frustum Culling
 * GPU Occlusion Culling
 * Level Of Detail(LOD)
+
+## Additional Features
+* Scrolling Noise Texture for Wind Simulation
+* Grass Animation based on Grass Height
+* Options for Real-Time Adjustment of: Culling, Grass Appearance, Wind Properties 
 
 ## Resources Used
 - [Acerola](https://www.youtube.com/watch?v=Y0Ko0kvwfgA)
