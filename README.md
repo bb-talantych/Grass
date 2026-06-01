@@ -17,7 +17,7 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 * Chunking
 * Chunk GPU Distance Culling
 * Chunk GPU AABB Frustum Culling
-* Skipping CPU Updates of Culled Chunks
+* Skipping Updates/Dispatch Calls on Culled Chunks
 * Grass GPU Distance Culling
 * Grass GPU Frustum Culling
 * Grass GPU Occlusion Culling
