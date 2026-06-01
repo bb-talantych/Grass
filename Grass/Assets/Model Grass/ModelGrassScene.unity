@@ -682,9 +682,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2407c53c4c0b27d44994c4b3dbad48c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  grassFieldSize: 615
+  grassFieldSize: 600
   grassDensity: 5
-  numChunks: 8
+  numChunks: 6
   windDir: {x: 1, y: 0.5}
   windSpeed: 4
   frequency: 0.33
