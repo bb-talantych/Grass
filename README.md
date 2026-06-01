@@ -5,8 +5,8 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 ![](./examples/grass-billboard-v1.gif)
 ### Optimization Techniques Used
 * GPU Instancing
-* CPU Distance Culling
-* CPU Frustum Culling
+* Grass CPU Distance Culling
+* Grass CPU Frustum Culling
 * Billboarding
 * Level Of Detail(LOD)
 
@@ -14,10 +14,12 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 ### Optimization Techniques Used
 * GPU Instancing
 * Chunking
+* Chunk GPU Distance Culling
 * Chunk GPU AABB Frustum Culling
-* GPU Distance Culling
-* GPU Frustum Culling
-* GPU Occlusion Culling
+* Skipping CPU Updates of Culled Chunks
+* Grass GPU Distance Culling
+* Grass GPU Frustum Culling
+* Grass GPU Occlusion Culling
 * Level Of Detail(LOD)
 
 ## Additional Features
