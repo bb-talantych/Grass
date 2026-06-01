@@ -11,6 +11,7 @@ A collection of **Grass Rendering Approaches** and **Optimization Techniques**.
 * Level Of Detail(LOD)
 
 ## Model Grass
+![](./examples/grass-model-v2.gif)
 ### Optimization Techniques Used
 * GPU Instancing
 * Chunking
