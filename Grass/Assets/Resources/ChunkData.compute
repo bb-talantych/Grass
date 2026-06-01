@@ -39,6 +39,7 @@ void GetChunkData (uint3 id : SV_DispatchThreadID)
 
     // offset height with noise
     float3 noise = _HeightMap.SampleLevel(sampler_HeightMap, uv, 0).rgb;
+    noise = saturate(noise * noise * 2);
     float displacement = dot(noise, float3(0.2126, 0.7152, 0.0722));
 
     // finalizing buffer

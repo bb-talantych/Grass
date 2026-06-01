@@ -355,8 +355,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 5, z: -10}
+  m_LocalRotation: {x: 0.00043948748, y: 0.1954749, z: 0.0008674927, w: -0.98070824}
+  m_LocalPosition: {x: 29.476803, y: 5.117515, z: -21.072886}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -479,7 +479,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 30, y: 1, z: 30}
+  m_LocalScale: {x: 100, y: 1, z: 100}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -603,13 +603,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1036675947}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.7223285, y: 0.412013, z: -0.30740806, w: 0.46258748}
-  m_LocalPosition: {x: 7.6, y: 0.2, z: 7.5}
+  m_LocalRotation: {x: 0.7281861, y: 0.40156972, z: -0.3007156, w: 0.4669657}
+  m_LocalPosition: {x: 31.48, y: 0.2, z: 7.3}
   m_LocalScale: {x: 8, y: 8, z: 8}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 112.84, y: 9.328, z: -53.2}
+  m_LocalEulerAnglesHint: {x: 112.84, y: 9.328, z: -51.55}
 --- !u!1 &1640046586 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1996949644332423803, guid: e73db9af4093b814199469aaa0f04e2c, type: 3}
@@ -663,13 +663,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1679564819}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: 0.042863972, y: -0.24101473, z: 0.010655688, w: 0.9695159}
+  m_LocalPosition: {x: 12.693024, y: 3.3422399, z: -105.26195}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 5.063, y: -27.921, z: 0}
 --- !u!114 &1679564822
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -682,23 +682,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2407c53c4c0b27d44994c4b3dbad48c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  grassFieldSize: 300
-  grassDensity: 17
-  numChunks: 5
+  grassFieldSize: 615
+  grassDensity: 5
+  numChunks: 8
   windDir: {x: 1, y: 0.5}
   windSpeed: 4
   frequency: 0.33
   windStrength: 2
   baseColor: {r: 0.09569933, g: 0.2641509, b: 0.06852973, a: 0}
   tipColor: {r: 0.8584906, g: 0.8019983, b: 0.1012371, a: 0}
-  displacementStrength: 1
-  cullingBias: 0.55
-  cullingBias_Down: 1.75
-  lodCutoff: 160
+  displacementStrength: 2.05
+  cullingBias: 0.1
+  cullingBias_Down: 0.6
+  lodCutoff: 315
   lodGroup0: 0.35
   grassMesh_LOD0: {fileID: -462981019419857548, guid: 122edea8244e1f44d86056a05057855f, type: 3}
   grassMesh_LOD1: {fileID: -462981019419857548, guid: 375c4f46861b9e94090e5fa6746a4933, type: 3}
-  grassMaterial: {fileID: 2100000, guid: 93f68c98d94fb9049b0e6c6a67fa2fd1, type: 2}
+  grassMaterial_LOD0: {fileID: 2100000, guid: 93f68c98d94fb9049b0e6c6a67fa2fd1, type: 2}
+  grassMaterial_LOD1: {fileID: 2100000, guid: c5113cb9cd1432b41bc9db9ef2557568, type: 2}
   chunkDataCompute: {fileID: 7200000, guid: 5595809dc20a595459f4e1e11b8136a2, type: 3}
   cullGrassCompute: {fileID: 7200000, guid: b18b7320204ed8e4e92a33281f6231b0, type: 3}
   windNoiseCompute: {fileID: 7200000, guid: 3bb75b5d782858d4fbc00424e4cddc76, type: 3}
@@ -845,5 +846,5 @@ SceneRoots:
   - {fileID: 963194228}
   - {fileID: 705507995}
   - {fileID: 981140110}
-  - {fileID: 2107872252}
   - {fileID: 1036675951}
+  - {fileID: 2107872252}

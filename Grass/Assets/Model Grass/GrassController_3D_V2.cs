@@ -30,10 +30,10 @@ public class GrassController_3D_V2 : MonoBehaviour
 
     [Header("Optimization Properties")]
     [Range(0f, 1f)]
-    public float cullingBias = 0.55f;
+    public float cullingBias = 0.1f;
     [Range(0f, 2f)]
-    public float cullingBias_Down = 1.75f;
-    [Range(0f, 500f)]
+    public float cullingBias_Down = 0.6f;
+    [Range(0f, 1000f)]
     public float lodCutoff = 160f;
     [Range(0f, 1f)]
     public float lodGroup0 = 0.35f;
@@ -41,7 +41,7 @@ public class GrassController_3D_V2 : MonoBehaviour
     [Header("Required Assets")]
     public Mesh grassMesh_LOD0;
     public Mesh grassMesh_LOD1;
-    public Material grassMaterial;
+    public Material grassMaterial_LOD0, grassMaterial_LOD1;
     public ComputeShader chunkDataCompute, cullGrassCompute, windNoiseCompute;
     public Texture2D heightTex;
 
@@ -54,16 +54,22 @@ public class GrassController_3D_V2 : MonoBehaviour
     private struct ChunkData
     {
         public int ChunkID;
+
         public ComputeBuffer grassDataBuffer;
         public ComputeBuffer culledGrassBuffer;
         public ComputeBuffer argsBuffer;
+
         public Bounds chunkBounds;
-        public Material grassMaterial;
+
+        public Material grassMaterial_LOD0;
+        public Material grassMaterial_LOD1;
     }
 
     private Camera cam;
+
     private RenderTexture depthRT;
     private RenderTexture windNoiseTexture;
+
     private ChunkData[] chunkArray;
     private int totalChunkGrass, chunkDimension;
     private int chunkDataKernelIndex, cullChunksKernelIndex, cullGrassKernelIndex, windNoiseKernelIndex;
@@ -71,6 +77,7 @@ public class GrassController_3D_V2 : MonoBehaviour
     private Vector3 chunkSize;
 
     ComputeBuffer argsCopyCountBuffer, chunksCenterBuffer, culledChunksBuffer;
+    int[] visibleChunksArr;
 
     void Start()
     {
@@ -86,7 +93,6 @@ public class GrassController_3D_V2 : MonoBehaviour
         InitializeWindData(windTexSize);
 
         InitializeData();
-
     }
     private void Update()
     {
@@ -96,17 +102,18 @@ public class GrassController_3D_V2 : MonoBehaviour
 
         UpdateCullGrassCommon();
 
-        cullGrassCompute.Dispatch(cullChunksKernelIndex, cullChunksThreadGroups, 1, 1);
+        RetrieveVisibleChunks();
 
         foreach (var chunk in chunkArray)
         {
+            if (IsChunkCulled(chunk)) continue;
+
             CullGrass(chunk);
 
             UpdateChunkVariables(chunk);
 
             float dist = Vector3.Distance(cam.transform.position, chunk.chunkBounds.center);
-
-            if(dist < lodGroup0 * lodCutoff)
+            if (dist < lodGroup0 * lodCutoff)
             {
                 uint[] argsData = new uint[5]
                 {
@@ -121,7 +128,7 @@ public class GrassController_3D_V2 : MonoBehaviour
                 Graphics.DrawMeshInstancedIndirect(
                     grassMesh_LOD0,
                     0,
-                    chunk.grassMaterial,
+                    chunk.grassMaterial_LOD0,
                     new Bounds(Vector3.zero, new Vector3(grassFieldSize, displacementStrength * 2, grassFieldSize)),
                     chunk.argsBuffer
                 );
@@ -141,7 +148,7 @@ public class GrassController_3D_V2 : MonoBehaviour
                 Graphics.DrawMeshInstancedIndirect(
                     grassMesh_LOD1,
                     0,
-                    chunk.grassMaterial,
+                    chunk.grassMaterial_LOD1,
                     new Bounds(Vector3.zero, new Vector3(grassFieldSize, displacementStrength * 2, grassFieldSize)),
                     chunk.argsBuffer
                 );
@@ -184,11 +191,11 @@ public class GrassController_3D_V2 : MonoBehaviour
         int grassFieldResolution = grassFieldSize * grassDensity;
         int totalGrass = grassFieldResolution * grassFieldResolution;
 
-
-        // Chunk Variables
+        // Chunk variables
         int totalChunks = numChunks * numChunks;
         totalChunkGrass = Mathf.CeilToInt(totalGrass / (float)totalChunks);
         int chunkResolution = Mathf.CeilToInt(grassFieldResolution / (float)numChunks);
+
         chunkDataThreadGroups = Mathf.CeilToInt(chunkResolution / 8.0f);
         chunkDimension = Mathf.CeilToInt(grassFieldSize / (float)numChunks);
 
@@ -199,6 +206,8 @@ public class GrassController_3D_V2 : MonoBehaviour
 
         // ChunkData
         chunkArray = new ChunkData[totalChunks];
+        visibleChunksArr = new int[totalChunks];
+
         chunkDataKernelIndex = chunkDataCompute.FindKernel("GetChunkData");
 
         chunkDataCompute.SetInt("chunkResolution", chunkResolution);
@@ -268,12 +277,17 @@ public class GrassController_3D_V2 : MonoBehaviour
             new Bounds(chunkCenter, chunkSize);
         
         // Grass Material
-        Material chunkGrassMaterial = new Material(grassMaterial);
-        chunkGrassMaterial.enableInstancing = true;
-        chunkGrassMaterial.SetBuffer("grassDataBuffer", chunk.culledGrassBuffer);
-        chunkGrassMaterial.SetTexture("_WindTex", windNoiseTexture);
+        Material chunkGrassMaterial_LOD0 = new Material(grassMaterial_LOD0);
+        chunkGrassMaterial_LOD0.enableInstancing = true;
+        chunkGrassMaterial_LOD0.SetBuffer("grassDataBuffer", chunk.culledGrassBuffer);
+        chunkGrassMaterial_LOD0.SetTexture("_WindTex", windNoiseTexture);
+        chunk.grassMaterial_LOD0 = chunkGrassMaterial_LOD0;
 
-        chunk.grassMaterial = chunkGrassMaterial;
+        Material chunkGrassMaterial_LOD1 = new Material(grassMaterial_LOD1);
+        chunkGrassMaterial_LOD1.enableInstancing = true;
+        chunkGrassMaterial_LOD1.SetBuffer("grassDataBuffer", chunk.culledGrassBuffer);
+        chunkGrassMaterial_LOD1.SetTexture("_WindTex", windNoiseTexture);
+        chunk.grassMaterial_LOD1 = chunkGrassMaterial_LOD1;
 
         return chunk;
     }
@@ -311,9 +325,18 @@ public class GrassController_3D_V2 : MonoBehaviour
         cullGrassCompute.SetFloat("_CullingBias_Down", cullingBias_Down);
         cullGrassCompute.SetVectorArray("_CameraClipPlanes", GetViewFrustumPlaneNormals(cam));
     }
+    void RetrieveVisibleChunks()
+    {
+        cullGrassCompute.Dispatch(cullChunksKernelIndex, cullChunksThreadGroups, 1, 1);
+
+        culledChunksBuffer.GetData(visibleChunksArr);
+    }
+    bool IsChunkCulled(ChunkData _chunk)
+    {
+        return visibleChunksArr[_chunk.ChunkID] == 0;
+    }
     void CullGrass(ChunkData _chunk)
     {
-        cullGrassCompute.SetInt("_ChunkID", _chunk.ChunkID);
         cullGrassCompute.SetBuffer(cullGrassKernelIndex, "grassDataBuffer", _chunk.grassDataBuffer);
         cullGrassCompute.SetBuffer(cullGrassKernelIndex, "culledGrassBuffer", _chunk.culledGrassBuffer);
 
@@ -322,10 +345,15 @@ public class GrassController_3D_V2 : MonoBehaviour
     }
     void UpdateChunkVariables(ChunkData _chunk)
     {
-        _chunk.grassMaterial.SetColor("_BaseColor", baseColor);
-        _chunk.grassMaterial.SetColor("_TipColor", tipColor);
-        _chunk.grassMaterial.SetVector("_WindDir", windDir.normalized);
-        _chunk.grassMaterial.SetFloat("_DisplacementStrength", displacementStrength);
+        _chunk.grassMaterial_LOD0.SetColor("_BaseColor", baseColor);
+        _chunk.grassMaterial_LOD0.SetColor("_TipColor", tipColor);
+        _chunk.grassMaterial_LOD0.SetVector("_WindDir", windDir.normalized);
+        _chunk.grassMaterial_LOD0.SetFloat("_DisplacementStrength", displacementStrength);
+
+        _chunk.grassMaterial_LOD1.SetColor("_BaseColor", baseColor);
+        _chunk.grassMaterial_LOD1.SetColor("_TipColor", tipColor);
+        _chunk.grassMaterial_LOD1.SetVector("_WindDir", windDir.normalized);
+        _chunk.grassMaterial_LOD1.SetFloat("_DisplacementStrength", displacementStrength);
     }
     int GetCulledCount(ComputeBuffer _buffer)
     {

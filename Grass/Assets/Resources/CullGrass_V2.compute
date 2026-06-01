@@ -45,7 +45,6 @@ float4x4 _ViewProjectionMatrix, _CameraProjectionToWorld;
 
 uint _TotalChunks, _TotalChunkGrass;
 
-int _ChunkID;
 float3 _ChunkSize;
 
 float3 _CamPos;
@@ -94,7 +93,10 @@ bool IsChunkFrustumCulled(float3 _center, float3 _extents, float _bias, float _b
 }
 bool IsChunkDistCulled(float3 _center, float3 _extents, float3 _camPos, float _lodCutoff)
 {
-    // testing
+    // testing 1
+    //return IsDistCulled(_center, _camPos, _lodCutoff);
+
+    // testing 2
     //float3 test0 = _center - _extents;
     //float3 test1 = _center + _extents;
 
@@ -191,11 +193,7 @@ bool IsOcclusionCulled(float3 _grassPos, float3 _camPos, float _displacement)
         float3(-boxWidth, boxHeight, -boxDepth)
     };
 
-    return  IsOccluded(_grassPos, _camPos, offsetsArr[4]) &&
-            IsOccluded(_grassPos, _camPos, offsetsArr[5]) &&
-            IsOccluded(_grassPos, _camPos, offsetsArr[6]) &&
-            IsOccluded(_grassPos, _camPos, offsetsArr[7]);
-    
+    // testing 1
     //for(int i = 0; i < offsetsCount; i++)
     //{
     //    if(!IsOccluded(_grassPos, _camPos, offsetsArr[i]))
@@ -203,8 +201,13 @@ bool IsOcclusionCulled(float3 _grassPos, float3 _camPos, float _displacement)
     //        return false;
     //    }
     //}
-
     //return true;
+
+    return  IsOccluded(_grassPos, _camPos, offsetsArr[4]) &&
+            IsOccluded(_grassPos, _camPos, offsetsArr[5]) &&
+            IsOccluded(_grassPos, _camPos, offsetsArr[6]) &&
+            IsOccluded(_grassPos, _camPos, offsetsArr[7]);
+    
 }
 bool PosIsBelowClipPlane (float3 _pos, int _planeIndex, float _bias) 
 {
@@ -213,7 +216,13 @@ bool PosIsBelowClipPlane (float3 _pos, int _planeIndex, float _bias)
 }
 bool IsFrustumCulled(float3 _pos, float _bias, float _bias_down)
 {
-    // testing 
+    // testing 1
+    //return  PosIsBelowClipPlane(_pos, 2, -_bias_down) ||
+    //        PosIsBelowClipPlane(_pos, 0, -_bias) ||
+		  //  PosIsBelowClipPlane(_pos, 1, -_bias) ||
+		  //  PosIsBelowClipPlane(_pos, 3, -_bias);
+
+    // testing 2
     //float4 clipPos  = mul(_ViewProjectionMatrix, float4(_pos, 1));
     //float3 ndc = clipPos.xyz / clipPos.w;
     //ndc.xy = ndc.xy * 0.5 + 0.5;
@@ -223,10 +232,10 @@ bool IsFrustumCulled(float3 _pos, float _bias, float _bias_down)
     //        ndc.y < -_bias_down || ndc.y > 1 + _bias ||
     //        ndc.z <= -0.1f;
 
-    return  PosIsBelowClipPlane(_pos, 2, -_bias_down) ||
-            PosIsBelowClipPlane(_pos, 0, -_bias) ||
-		    PosIsBelowClipPlane(_pos, 1, -_bias) ||
-		    PosIsBelowClipPlane(_pos, 3, -_bias);
+    float4 clipPos = mul(_ViewProjectionMatrix, float4(_pos, 1));
+    return  //clipPos.z / clipPos.w > _LODCutoff ||
+            clipPos.x < clipPos.w * -(1 + _bias) || clipPos.x > clipPos.w * (1 + _bias) ||
+            clipPos.y < clipPos.w * -(1 + _bias_down) || clipPos.y > clipPos.w * (1 + _bias);
 }
 bool IsGrassCulled(GrassCullingData _data)
 {
@@ -238,7 +247,6 @@ bool IsGrassCulled(GrassCullingData _data)
 void CullGrass (uint3 id : SV_DispatchThreadID)
 {
     if(id.x >= _TotalChunkGrass) return;
-    if(culledChunksBuffer[_ChunkID] == 0) return;
 
     GrassCullingData grassData;
     grassData.grassPos = grassDataBuffer[id.x].position;
